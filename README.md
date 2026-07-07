@@ -1,2 +1,2 @@
 # MedVisionAI
-An AI-powered medical image analysis platform built with PyTorch, FastAPI, and React.
+AI-powered medical image analysis platform for education and clinical decision support.
