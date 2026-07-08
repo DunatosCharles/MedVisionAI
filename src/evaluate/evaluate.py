@@ -35,7 +35,7 @@ def evaluate():
 
     model.load_state_dict(
         torch.load(
-            "models/checkpoints/best_model.pth",
+            "models/checkpoints/cnn_optimized.pth",
             map_location=device
         )
     )
