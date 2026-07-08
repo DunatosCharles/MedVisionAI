@@ -41,6 +41,8 @@ def train():
 
     epochs = 10
 
+    best_val_accuracy = 0
+
     for epoch in range(epochs):
 
         model.train()
@@ -77,12 +79,64 @@ def train():
 
         train_accuracy = correct / total
 
-        print(
-            f"Epoch {epoch+1}/{epochs} "
-            f"Loss: {running_loss:.4f} "
-            f"Accuracy: {train_accuracy:.4f}"
+        val_loss, val_accuracy = validate(
+            model,
+            val_loader,
+            criterion,
+            device
         )
 
+        print(
+            f"Epoch {epoch+1}/{epochs} | "
+            f"Train Loss: {running_loss:.4f} | "
+            f"Train Acc: {train_accuracy:.4f} | "
+            f"Val Acc: {val_accuracy:.4f}"
+        )
+
+    if val_accuracy > best_val_accuracy:
+
+        best_val_accuracy = val_accuracy
+
+        torch.save(
+            model.state_dict(),
+            "models/checkpoints/best_model.pth"
+        )
+
+        print("Saved best model!")
 
 if __name__ == "__main__":
+
+    def validate(model, val_loader, criterion, device):
+
+        model.eval()
+
+        running_loss = 0.0
+        correct = 0
+        total = 0
+
+        with torch.no_grad():
+
+            for images, labels in val_loader:
+
+                images = images.to(device)
+                labels = labels.squeeze().long().to(device)
+
+                outputs = model(images)
+
+                loss = criterion(outputs, labels)
+
+                running_loss += loss.item()
+
+                predictions = torch.argmax(
+                    outputs,
+                    dim=1
+                )
+
+                correct += (predictions == labels).sum().item()
+                total += labels.size(0)
+
+        accuracy = correct / total
+
+        return running_loss, accuracy
+
     train()
