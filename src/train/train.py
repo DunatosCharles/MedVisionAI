@@ -76,6 +76,13 @@ def train():
         lr=0.0005
     )
 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="max",
+        factor=0.5,
+        patience=3
+    )
+
     epochs = 50
 
     best_val_accuracy = 0
@@ -131,12 +138,14 @@ def train():
             device
         )
 
+        scheduler.step(val_accuracy)
 
         print(
             f"Epoch {epoch+1}/{epochs} | "
             f"Train Loss: {running_loss:.4f} | "
             f"Train Acc: {train_accuracy:.4f} | "
-            f"Val Acc: {val_accuracy:.4f}"
+            f"Val Acc: {val_accuracy:.4f} | "
+            f"LR: {optimizer.param_groups[0]['lr']}"
         )
 
 
