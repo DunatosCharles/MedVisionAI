@@ -156,7 +156,7 @@ def train():
 
             torch.save(
                 model.state_dict(),
-                "models/checkpoints/best_model.pth"
+                "models/checkpoints/cnn_baseline.pth"
             )
 
             print("Saved best model!")
