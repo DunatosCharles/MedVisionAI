@@ -51,5 +51,8 @@ class BreastCancerResNet(nn.Module):
             2
         )
 
+        for param in self.model.fc.parameters():
+            param.requires_grad = True
+
     def forward(self, x):
         return self.model(x)

@@ -11,12 +11,8 @@ def get_resnet_dataloaders(batch_size=32):
             (224,224)
         ),
 
-        transforms.RandomHorizontalFlip(
-            p=0.5
-        ),
-
         transforms.RandomRotation(
-            degrees=10
+            degrees=5
         ),
 
         transforms.RandomAffine(
@@ -27,8 +23,8 @@ def get_resnet_dataloaders(batch_size=32):
         transforms.ToTensor(),
 
         transforms.Normalize(
-            mean=[0.5],
-            std=[0.5]
+            mean=[0.4829],
+            std=[0.229]
         )
     ])
 
@@ -42,8 +38,8 @@ def get_resnet_dataloaders(batch_size=32):
         transforms.ToTensor(),
 
         transforms.Normalize(
-            mean=[0.5],
-            std=[0.5]
+            mean=[0.4829],
+            std=[0.229]
         )
     ])
 

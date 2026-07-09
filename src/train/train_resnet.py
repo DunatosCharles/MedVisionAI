@@ -168,7 +168,7 @@ def train():
 
             torch.save(
                 model.state_dict(),
-                "models/checkpoints/resnet18_finetuned_v3.pth"
+                "models/checkpoints/resnet18_breastmnist_final_best_f1.pth"
             )
 
             print("Saved best model!")
@@ -186,7 +186,10 @@ def train():
         f"Best validation F1: {best_val_f1:.4f}"
     )
 
+    print("Best F1 checkpoint saved:")
+    print(best_val_f1)
 
 if __name__ == "__main__":
 
     train()
+
