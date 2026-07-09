@@ -102,6 +102,14 @@ def train():
     patience = 10
     counter = 0
 
+    history = {
+        "train_loss": [],
+        "train_acc": [],
+        "val_acc": [],
+        "val_f1": [],
+        "lr": []
+    }
+
     for epoch in range(epochs):
 
         model.train()
@@ -161,6 +169,14 @@ def train():
             f"LR: {optimizer.param_groups[0]['lr']}"
         )
 
+        history["train_loss"].append(running_loss)
+        history["train_acc"].append(train_accuracy)
+        history["val_acc"].append(val_accuracy)
+        history["val_f1"].append(val_f1)
+        history["lr"].append(
+            optimizer.param_groups[0]["lr"]
+        )
+
         if val_f1 > best_val_f1:
 
             best_val_f1 = val_f1
@@ -188,6 +204,20 @@ def train():
 
     print("Best F1 checkpoint saved:")
     print(best_val_f1)
+
+    import json
+
+    with open(
+        "training_history.json",
+        "w"
+    ) as f:
+        json.dump(
+            history,
+            f,
+            indent=4
+        )
+
+    print("Training history saved!")
 
 if __name__ == "__main__":
 
