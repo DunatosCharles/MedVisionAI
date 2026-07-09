@@ -8,8 +8,7 @@ from sklearn.metrics import (
 )
 
 from src.models.resnet import BreastCancerResNet
-from src.data.dataloader import get_dataloaders
-
+from src.data.resnet_dataloader import get_resnet_dataloaders
 
 def get_device():
 
@@ -29,7 +28,7 @@ def evaluate():
 
     print("Using device:", device)
 
-    _, _, test_loader = get_dataloaders()
+    _, _, test_loader = get_resnet_dataloaders()
 
     model = BreastCancerResNet().to(device)
 
@@ -39,6 +38,8 @@ def evaluate():
             map_location=device
         )
     )
+
+    print(model)
 
     model.eval()
 

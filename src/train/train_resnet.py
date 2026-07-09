@@ -74,7 +74,7 @@ def train():
 
 
     class_weights = torch.tensor(
-        [399/147, 1.0],
+        [2.7, 1.0],
         dtype=torch.float32
     ).to(device)
 
@@ -89,7 +89,7 @@ def train():
             lambda p: p.requires_grad,
             model.parameters()
         ),
-        lr=0.0001
+        lr=0.00005
     )
 
 
@@ -195,7 +195,7 @@ def train():
 
             torch.save(
                 model.state_dict(),
-                "models/checkpoints/resnet18_finetuned.pth"
+                "models/checkpoints/resnet18_finetuned_v2.pth"
             )
 
             print("Saved best model!")
