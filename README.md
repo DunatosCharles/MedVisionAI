@@ -1179,6 +1179,54 @@ The evaluation script also generates a confusion matrix showing classification p
 
 ---
 
+# Model Explainability
+
+To improve interpretability, Grad-CAM was implemented to visualize which regions of the ultrasound image influenced the model prediction.
+
+Grad-CAM generates a heatmap over the input image, highlighting important feature regions used by the ResNet18 model.
+
+Example:
+
+## Grad-CAM Explainability
+
+Grad-CAM was implemented to visualize the regions of the ultrasound image that influenced the model prediction.
+
+### Correct Classification Example
+
+![Correct Grad-CAM](screenshots/gradcam_correct.png)
+
+
+Example output:
+
+Prediction: Malignant
+Confidence: 97.11%
+True Label: Malignant
+
+### Misclassification Example
+
+The model can still make incorrect predictions due to the limited size and complexity of the dataset.
+
+![Wrong Grad-CAM](screenshots/gradcam_wrong_prediction.png)
+
+
+Example output:
+
+Prediction: Malignant
+Confidence: 76.51%
+True Label: Benign
+
+
+This highlights the importance of explainability methods when analyzing medical AI models.
+
+# Model Inference
+
+The trained model can be used for prediction on new ultrasound images.
+
+Example:
+
+```bash
+python -m scripts.predict screenshots/gradcam_example.png
+
 # Model Loading
 
 The trained model can be loaded using:
@@ -1379,6 +1427,20 @@ Combining multiple models could improve prediction stability.
 
 
 ---
+
+## Training Curves
+
+### Loss
+
+![Training Loss](screenshots/training_loss.png)
+
+### Accuracy
+
+![Accuracy](screenshots/accuracy_curve.png)
+
+### Validation F1
+
+![F1 Score](screenshots/f1_curve.png)
 
 # Disclaimer
 
