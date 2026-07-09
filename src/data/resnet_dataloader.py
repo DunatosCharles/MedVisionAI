@@ -8,23 +8,27 @@ def get_resnet_dataloaders(batch_size=32):
     train_transform = transforms.Compose([
 
         transforms.Resize(
-            (224, 224)
+            (224,224)
+        ),
+
+        transforms.RandomHorizontalFlip(
+            p=0.5
         ),
 
         transforms.RandomRotation(
-            degrees=5
+            degrees=10
         ),
 
         transforms.RandomAffine(
             degrees=0,
-            translate=(0.05, 0.05)
+            translate=(0.05,0.05)
         ),
 
         transforms.ToTensor(),
 
         transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
+            mean=[0.5],
+            std=[0.5]
         )
     ])
 
@@ -32,14 +36,14 @@ def get_resnet_dataloaders(batch_size=32):
     test_transform = transforms.Compose([
 
         transforms.Resize(
-            (224, 224)
+            (224,224)
         ),
 
         transforms.ToTensor(),
 
         transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
+            mean=[0.5],
+            std=[0.5]
         )
     ])
 
