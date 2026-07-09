@@ -32,7 +32,20 @@ class BreastCancerResNet(nn.Module):
 
         self.model.conv1 = new_conv
 
-        # Train only classifier
+        # Freeze pretrained layers
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+
+        # Fine tune deeper layers
+        for param in self.model.layer3.parameters():
+            param.requires_grad = True
+
+        for param in self.model.layer4.parameters():
+            param.requires_grad = True
+
+
+        # Replace classifier
         self.model.fc = nn.Linear(
             self.model.fc.in_features,
             2
