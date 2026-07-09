@@ -34,7 +34,7 @@ def evaluate():
 
     model.load_state_dict(
         torch.load(
-            "models/checkpoints/best_resnet18_breastmnist.pth",
+            "models/checkpoints/resnet18_breastmnist_final.pth",
             map_location=device
         )
     )
