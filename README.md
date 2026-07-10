@@ -1164,7 +1164,7 @@ The model achieved strong performance early because transfer learning allowed Re
 ## Clone Repository
 
 ```bash
-git clone <https://github.com/DunatosCharles/MedVisionAI.git>
+git clone https://github.com/DunatosCharles/MedVisionAI.git
 
 cd MedVisionAI
 ```
