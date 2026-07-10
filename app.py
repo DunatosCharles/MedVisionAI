@@ -23,14 +23,7 @@ st.set_page_config(
 
 def get_device():
 
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-
-    elif torch.backends.mps.is_available():
-        return torch.device("mps")
-
-    else:
-        return torch.device("cpu")
+    return torch.device("cpu")
 
 
 device = get_device()
@@ -48,7 +41,8 @@ def load_model():
     model.load_state_dict(
         torch.load(
             "models/checkpoints/resnet18_breastmnist_final_best_f1.pth",
-            map_location=device
+            map_location="cpu",
+            weights_only=True
         )
     )
 
@@ -59,6 +53,7 @@ def load_model():
 
 model = load_model()
 
+st.write("Model loaded successfully")
 
 # -----------------------
 # Image Preprocessing
