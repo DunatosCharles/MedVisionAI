@@ -948,6 +948,88 @@ Interpretation:
 
 ---
 
+## Live Demo
+
+Try the deployed MedVisionAI application:
+
+🔗 **Live Demo:** YOUR_STREAMLIT_LINK_HERE
+
+The application allows users to upload breast ultrasound images and receive:
+- Benign or malignant classification
+- Prediction confidence score
+- Grad-CAM visualization showing regions influencing the model decision
+
+
+## Demo Screenshots
+
+### Ultrasound Classification
+
+The model accepts grayscale breast ultrasound images and predicts whether the sample is benign or malignant.
+
+![Prediction Example](screenshots/prediction.png)
+
+
+### Grad-CAM Explainability
+
+Grad-CAM is used to visualize which regions of the ultrasound image contribute most to the model's prediction.
+
+![Grad-CAM Example](screenshots/gradcam.png)
+
+
+
+## Explainable AI (Grad-CAM)
+
+To improve model transparency, MedVisionAI integrates Gradient-weighted Class Activation Mapping (Grad-CAM).
+
+Grad-CAM highlights important image regions used by the ResNet18 model when making predictions, helping users understand the model's decision-making process.
+
+
+## Deployment
+
+MedVisionAI is deployed using Streamlit Community Cloud.
+
+Deployment pipeline:
+
+```
+GitHub Repository
+        |
+        v
+Streamlit Community Cloud
+        |
+        v
+MedVisionAI Web Application
+```
+
+The application runs inference using the fine-tuned ResNet18 model checkpoint.
+
+
+## Model Performance
+
+Final evaluation on the BreastMNIST test set:
+
+| Metric | Score |
+|---|---:|
+| Accuracy | 88.46% |
+| Precision | 91.38% |
+| Recall | 92.98% |
+| F1 Score | 92.17% |
+
+Confusion Matrix:
+
+```
+[[32 10]
+ [ 8 106]]
+```
+
+
+## Limitations
+
+⚠️ MedVisionAI is a research and educational project only.
+
+It is not a medical diagnostic system and should not be used for clinical decisions.
+
+The model was trained and evaluated on the BreastMNIST dataset and may not generalize to all real-world ultrasound images, equipment, populations, or clinical environments.
+
 # Metric Interpretation
 
 
