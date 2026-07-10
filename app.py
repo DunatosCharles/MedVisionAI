@@ -1,3 +1,7 @@
+import os
+
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+
 import streamlit as st
 import torch
 from PIL import Image
@@ -16,6 +20,7 @@ st.set_page_config(
     layout="centered"
 )
 
+st.write("MedVisionAI server started")
 
 # -----------------------
 # Device
