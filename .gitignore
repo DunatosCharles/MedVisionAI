@@ -234,4 +234,4 @@ __pycache__/
 models/checkpoints/*.pth
 
 # Keep final model
-!models/checkpoints/resnet18_breastmnist_final_best_f1.pth
+!models/checkpoints/resnet18_breastmnist_final_best_f1.pth  

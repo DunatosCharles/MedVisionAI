@@ -92,6 +92,26 @@ st.write(
     """
 )
 
+st.info(
+    """
+    📌 **Image Requirements**
+
+    For best results, upload a grayscale breast ultrasound image.
+
+    Recommended:
+    - Breast ultrasound images only
+    - Grayscale images
+    - PNG or JPG format
+    - Similar appearance to BreastMNIST ultrasound images
+
+    The model was trained on the BreastMNIST dataset and may not perform reliably on:
+    - MRI, CT, X-ray, or other medical imaging types
+    - Color images
+    - Non-breast ultrasound images
+    - Images from different clinical settings
+
+    """
+)
 
 uploaded_file = st.file_uploader(
     "Upload ultrasound image",
@@ -190,9 +210,13 @@ st.warning(
     """
     ⚠️ Disclaimer:
 
-    This project is for educational and research purposes only.
+    MedVisionAI is a research and educational project only.
     It is not a medical diagnostic system and should not be used
     for clinical decisions.
+
+    The model was trained on the BreastMNIST dataset and its
+    predictions may not generalize to all real-world ultrasound
+    images, equipment, populations, or clinical environments.
     """
 )
 
