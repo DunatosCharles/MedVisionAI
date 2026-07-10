@@ -1175,7 +1175,7 @@ cd MedVisionAI
 ## Create Virtual Environment
 
 ```bash
-python -m venv .venv
+python -m venv clean_test
 ```
 
 
@@ -1185,7 +1185,7 @@ Activate the environment:
 ### macOS / Linux
 
 ```bash
-source .venv/bin/activate
+source clean_test/bin/activate
 ```
 
 
@@ -1194,7 +1194,7 @@ source .venv/bin/activate
 ## Install Dependencies
 
 ```bash
-pip install torch torchvision medmnist scikit-learn matplotlib numpy
+pip install -r requirements.txt
 ```
 
 
