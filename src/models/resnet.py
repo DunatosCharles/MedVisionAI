@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-from torchvision.models import resnet18, ResNet18_Weights
-
 
 class BreastCancerResNet(nn.Module):
 
@@ -9,8 +7,7 @@ class BreastCancerResNet(nn.Module):
 
         super().__init__()
 
-        weights = ResNet18_Weights.DEFAULT
-        self.model = resnet18(weights=weights)
+        self.model = resnet18(weights=None)
 
         # Preserve pretrained knowledge by averaging RGB filters
         old_conv = self.model.conv1
