@@ -2,8 +2,11 @@ import os
 
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
-import streamlit as st
 import torch
+
+torch.set_num_threads(1)
+
+import streamlit as st
 from PIL import Image
 from torchvision import transforms
 
@@ -20,64 +23,56 @@ st.set_page_config(
     layout="centered"
 )
 
-st.write("MedVisionAI server started")
 
 # -----------------------
 # Device
 # -----------------------
 
-def get_device():
-
-    return torch.device("cpu")
-
-
-device = get_device()
+device = torch.device("cpu")
 
 
 # -----------------------
 # Load Model
 # -----------------------
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def load_model():
 
-    model = BreastCancerResNet().to(device)
+    model = BreastCancerResNet()
 
-    model.load_state_dict(
-        torch.load(
-            "models/checkpoints/resnet18_breastmnist_final_best_f1.pth",
-            map_location="cpu",
-            weights_only=True
-        )
+    checkpoint = torch.load(
+        "models/checkpoints/resnet18_breastmnist_final_best_f1.pth",
+        map_location="cpu",
+        weights_only=True
     )
+
+    model.load_state_dict(checkpoint)
 
     model.eval()
 
     return model
 
 
-model = load_model()
+with st.spinner("Loading MedVisionAI model..."):
+    model = load_model()
 
-st.write("Model loaded successfully")
 
 # -----------------------
-# Image Preprocessing
+# Image Transform
 # -----------------------
 
-transform = transforms.Compose([
+transform = transforms.Compose(
+    [
+        transforms.Resize((224,224)),
 
-    transforms.Resize(
-        (224,224)
-    ),
+        transforms.ToTensor(),
 
-    transforms.ToTensor(),
-
-    transforms.Normalize(
-        mean=[0.4829],
-        std=[0.229]
-    )
-
-])
+        transforms.Normalize(
+            mean=[0.4829],
+            std=[0.229]
+        )
+    ]
+)
 
 
 # -----------------------
@@ -100,19 +95,13 @@ st.write(
 
 uploaded_file = st.file_uploader(
     "Upload ultrasound image",
-    type=[
-        "png",
-        "jpg",
-        "jpeg"
-    ]
+    type=["png", "jpg", "jpeg"]
 )
 
 
 if uploaded_file:
 
-    image = Image.open(
-        uploaded_file
-    ).convert("L")
+    image = Image.open(uploaded_file).convert("L")
 
 
     st.image(
@@ -122,16 +111,12 @@ if uploaded_file:
     )
 
 
-    input_tensor = transform(
-        image
-    ).unsqueeze(0).to(device)
+    input_tensor = transform(image).unsqueeze(0)
 
 
-    with torch.no_grad():
+    with torch.inference_mode():
 
-        outputs = model(
-            input_tensor
-        )
+        outputs = model(input_tensor)
 
         probabilities = torch.softmax(
             outputs,
@@ -149,60 +134,72 @@ if uploaded_file:
         "Malignant"
     ]
 
-
-    result = classes[
-        prediction.item()
-    ]
-
+    result = classes[prediction.item()]
 
     confidence = confidence.item() * 100
 
 
     st.divider()
 
-
-    st.success(
-        f"Prediction: {result}"
-    )
+    if result == "Malignant":
+        st.error(
+            f"Prediction: {result}"
+        )
+    else:
+        st.success(
+            f"Prediction: {result}"
+        )
 
 
     st.info(
         f"Confidence: {confidence:.2f}%"
     )
 
-    from src.explainability.gradcam_utils import generate_gradcam
+
+    # -----------------------
+    # Grad-CAM (lazy loading)
+    # -----------------------
+
+    if st.checkbox("Show Grad-CAM explanation"):
+
+        with st.spinner("Generating explanation..."):
+
+            from src.explainability.gradcam_utils import generate_gradcam
+
+            cam_image = generate_gradcam(
+                model,
+                input_tensor,
+                image,
+                device
+            )
+
+            st.image(
+                cam_image,
+                caption="Grad-CAM Visualization",
+                width=400
+            )
 
 
-    st.subheader(
-        "🔥 Model Attention (Grad-CAM)"
-    )
-
-
-    cam_image = generate_gradcam(
-        model,
-        input_tensor,
-        image,
-        device
-    )
-
-
-    st.image(
-        cam_image,
-        caption="Grad-CAM Visualization",
-        width=400
-    )
+# -----------------------
+# Disclaimer
+# -----------------------
 
 st.divider()
 
 st.warning(
     """
     ⚠️ Disclaimer:
-    
+
     This project is for educational and research purposes only.
     It is not a medical diagnostic system and should not be used
     for clinical decisions.
     """
 )
+
+
+# -----------------------
+# Sidebar
+# -----------------------
 
 st.sidebar.title("About MedVisionAI")
 
