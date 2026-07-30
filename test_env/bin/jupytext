@@ -1,0 +1,6 @@
+#!/Users/apple/Documents/MedVisionAI/test_env/bin/python3.12
+import sys
+from jupytext.cli import jupytext
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(jupytext())

@@ -1,4 +1,3 @@
-import sys
 import torch
 from PIL import Image
 from torchvision import transforms
@@ -18,12 +17,26 @@ def get_device():
         return torch.device("cpu")
 
 
-def predict(image_path):
+def load_model():
 
     device = get_device()
 
-    print("Using device:", device)
+    model = BreastCancerResNet().to(device)
 
+    model.load_state_dict(
+        torch.load(
+            "models/checkpoints/resnet18_busi_final.pth",
+            map_location=device
+        )
+    )
+
+    model.eval()
+
+    return model, device
+
+
+
+def preprocess_image(image_path):
 
     transform = transforms.Compose([
 
@@ -45,25 +58,21 @@ def predict(image_path):
     ).convert("L")
 
 
-    image = transform(
-        image
-    )
+    image = transform(image)
 
-    image = image.unsqueeze(0).to(device)
+    image = image.unsqueeze(0)
 
-
-    model = BreastCancerResNet().to(device)
+    return image
 
 
-    model.load_state_dict(
-        torch.load(
-            "models/checkpoints/resnet18_breastmnist_final_best_f1.pth",
-            map_location=device
-        )
-    )
 
+def predict(image_path):
 
-    model.eval()
+    model, device = load_model()
+
+    image = preprocess_image(
+        image_path
+    ).to(device)
 
 
     with torch.no_grad():
@@ -76,16 +85,9 @@ def predict(image_path):
         )
 
         prediction = torch.argmax(
-            probabilities,
+            output,
             dim=1
         ).item()
-
-
-        confidence = (
-            probabilities[0][prediction]
-            .item()
-            * 100
-        )
 
 
     classes = {
@@ -95,25 +97,22 @@ def predict(image_path):
 
 
     print(
-        f"\nPrediction: {classes[prediction]}"
+        "Prediction:",
+        classes[prediction]
     )
 
     print(
-        f"Confidence: {confidence:.2f}%"
+        "Confidence:",
+        round(
+            probabilities[0][prediction].item()*100,
+            2
+        ),
+        "%"
     )
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-
-        print(
-            "Usage: python scripts/predict.py <image_path>"
-        )
-
-        exit()
-
-
     predict(
-        sys.argv[1]
+        "/Users/apple/Documents/MedVisionAI/datasets/busi/Dataset_BUSI_with_GT/benign/benign (1).png"
     )

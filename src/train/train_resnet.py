@@ -35,7 +35,7 @@ def validate(model, val_loader, criterion, device):
         for images, labels in val_loader:
 
             images = images.to(device)
-            labels = labels.squeeze().long().to(device)
+            labels = labels.view(-1).long().to(device)
 
             outputs = model(images)
 
@@ -67,12 +67,14 @@ def train():
 
     print("Using device:", device)
 
-    train_loader, val_loader, _ = get_resnet_dataloaders()
+    train_loader, val_loader, _ = get_resnet_dataloaders(
+        dataset="busi"
+    )
 
     model = BreastCancerResNet().to(device)
 
     class_weights = torch.tensor(
-        [2.7, 1.0],
+        [1.0, 1.7],
         dtype=torch.float32
     ).to(device)
 
@@ -85,7 +87,7 @@ def train():
             lambda p: p.requires_grad,
             model.parameters()
         ),
-        lr=1e-4
+        lr=3e-5
     )
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -121,8 +123,7 @@ def train():
         for images, labels in train_loader:
 
             images = images.to(device)
-            labels = labels.squeeze().long().to(device)
-
+            labels = labels.view(-1).long().to(device)
             optimizer.zero_grad()
 
             outputs = model(images)
@@ -184,7 +185,7 @@ def train():
 
             torch.save(
                 model.state_dict(),
-                "models/checkpoints/resnet18_breastmnist_final_best_f1.pth"
+                "models/checkpoints/resnet18_busi_best_f1.pth"
             )
 
             print("Saved best model!")

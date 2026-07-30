@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 
 class BreastCancerResNet(nn.Module):
 
@@ -8,7 +8,9 @@ class BreastCancerResNet(nn.Module):
 
         super().__init__()
 
-        self.model = resnet18(weights=None)
+        self.model = resnet18(
+            weights=ResNet18_Weights.DEFAULT
+        )
 
         # Preserve pretrained knowledge by averaging RGB filters
         old_conv = self.model.conv1
@@ -24,7 +26,7 @@ class BreastCancerResNet(nn.Module):
 
         with torch.no_grad():
             new_conv.weight[:] = old_conv.weight.mean(
-                dim=1, 
+                dim=1,
                 keepdim=True
             )
 
@@ -34,8 +36,11 @@ class BreastCancerResNet(nn.Module):
         for param in self.model.parameters():
             param.requires_grad = False
 
+      # Fine tune deeper layers
 
-        # Fine tune deeper layers
+        for param in self.model.layer2.parameters():
+            param.requires_grad = True
+
         for param in self.model.layer3.parameters():
             param.requires_grad = True
 
@@ -44,9 +49,12 @@ class BreastCancerResNet(nn.Module):
 
 
         # Replace classifier
-        self.model.fc = nn.Linear(
-            self.model.fc.in_features,
-            2
+        self.model.fc = nn.Sequential(
+            nn.Dropout(0.4),
+            nn.Linear(
+                self.model.fc.in_features,
+                2
+            )
         )
 
         for param in self.model.fc.parameters():
