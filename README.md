@@ -6,7 +6,9 @@ MedVisionAI is a deep learning computer vision project exploring binary breast u
 
 The project evolved through two major experimental versions:
 
-* **Version 1 — BreastMNIST:** Initial experimentation using the MedMNIST benchmark dataset.
+* **Version 1 — BreastMNIST:** Initial experimentation using the MedMNIST benchmark dataset. (Yang, J., et al. "MedMNIST v2 - A large-scale lightweight benchmark 
+for 2D and 3D biomedical image classification." Scientific Data, 2023.)
+
 * **Version 2 — BUSI:** A more realistic breast ultrasound classification experiment using the Breast Ultrasound Images Dataset (BUSI).
 
 The project was developed to explore the complete machine learning workflow:
