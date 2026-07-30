@@ -1,329 +1,725 @@
 # MedVisionAI
 
-## Breast Cancer Classification Using Deep Learning and Transfer Learning
+## Breast Ultrasound Classification Using Deep Learning and Transfer Learning
 
-MedVisionAI is a deep learning computer vision project developed to classify breast ultrasound images into two categories:
+MedVisionAI is a deep learning computer vision project exploring binary breast ultrasound image classification using convolutional neural networks and transfer learning.
 
-- **Benign**
-- **Malignant**
+The project evolved through two major experimental versions:
 
-The project explores medical image classification using:
+* **Version 1 — BreastMNIST:** Initial experimentation using the MedMNIST benchmark dataset.
+* **Version 2 — BUSI:** A more realistic breast ultrasound classification experiment using the Breast Ultrasound Images Dataset (BUSI).
 
-- Convolutional Neural Networks (CNNs)
-- Transfer Learning
-- ResNet18
-- Image preprocessing and augmentation techniques
-- Model evaluation and performance analysis
+The project was developed to explore the complete machine learning workflow:
 
-The final model uses a modified **ResNet18 transfer learning architecture** optimized for the **BreastMNIST dataset** from the MedMNIST collection.
+```text
+Dataset
+   ↓
+Data Exploration
+   ↓
+Preprocessing
+   ↓
+Data Augmentation
+   ↓
+Model Development
+   ↓
+Transfer Learning
+   ↓
+Training Optimization
+   ↓
+Evaluation
+   ↓
+Explainability
+   ↓
+Deployment
+```
 
-The goal of this project is to build a complete medical image classification pipeline, including:
+The project currently focuses on binary classification:
 
-- Dataset preparation
-- Image preprocessing
-- Data augmentation
-- Baseline CNN modeling
-- Transfer learning
-- Model optimization
-- Evaluation using classification metrics
-- Performance analysis
+```text
+0 → Benign
+1 → Malignant
+```
 
+> ⚠️ **Important:** MedVisionAI is an educational and research project. It is not a medical diagnostic system and must not be used for clinical decision-making.
 
 ---
 
-## Live Demo
+# Live Demo
 
-Try the deployed MedVisionAI application:
+The MedVisionAI application is deployed using Streamlit Community Cloud.
 
 🔗 **Live Demo:** https://medvisionai-web.streamlit.app
 
-The application allows users to upload breast ultrasound images and receive:
-- Benign or malignant classification
-- Prediction confidence score
-- Grad-CAM visualization showing regions influencing the model decision
+The application allows users to:
 
+* Upload a breast ultrasound image
+* Receive a benign or malignant prediction
+* View the model's confidence score
+* Generate a Grad-CAM visualization showing regions that influenced the prediction
 
-## Demo Screenshots
+---
 
-### Ultrasound Classification
+# Project Evolution
 
-The model accepts grayscale breast ultrasound images and predicts whether the sample is benign or malignant.
+## Version 1 — BreastMNIST
 
-![Prediction Example](screenshots/prediction.png)
+The first version of MedVisionAI used the **BreastMNIST** dataset from the MedMNIST collection.
 
+The purpose of Version 1 was to:
 
-### Grad-CAM Explainability
+* Build the initial data pipeline
+* Experiment with medical image classification
+* Develop a baseline CNN
+* Explore transfer learning with ResNet18
+* Implement training and evaluation pipelines
+* Experiment with grayscale adaptation of pretrained models
 
-Grad-CAM is used to visualize which regions of the ultrasound image contribute most to the model's prediction.
+The initial model achieved strong performance on the BreastMNIST benchmark dataset.
 
-![Grad-CAM Example](screenshots/gradcam.png)
+However, BreastMNIST consists of small 28 × 28 pixel images. This made it useful for experimentation but less representative of a realistic high-resolution ultrasound classification problem.
 
+---
 
+## Version 2 — BUSI
 
-## Explainable AI (Grad-CAM)
+The second version transitioned to the **Breast Ultrasound Images Dataset (BUSI)**.
 
-To improve model transparency, MedVisionAI integrates Gradient-weighted Class Activation Mapping (Grad-CAM).
+This change was motivated by the desire to experiment with larger, more realistic breast ultrasound images.
 
-Grad-CAM highlights important image regions used by the ResNet18 model when making predictions, helping users understand the model's decision-making process.
+Version 2 introduced:
 
+* A larger image resolution
+* A custom BUSI dataset loader
+* A new train-validation-test split
+* Transfer learning using ResNet18
+* Data augmentation
+* Class-weighted loss
+* Learning-rate scheduling
+* Early stopping
+* Model checkpointing
+* Grad-CAM explainability
+* Streamlit deployment
 
-## Deployment
-
-MedVisionAI is deployed using Streamlit Community Cloud.
-
-Deployment pipeline:
-
-```
-GitHub Repository
-        |
-        v
-Streamlit Community Cloud
-        |
-        v
-MedVisionAI Web Application
-```
-
-The application runs inference using the fine-tuned ResNet18 model checkpoint.
-
-
-## Model Performance
-
-Final evaluation on the BreastMNIST test set:
-
-| Metric | Score |
-|---|---:|
-| Accuracy | 88.46% |
-| Precision | 91.38% |
-| Recall | 92.98% |
-| F1 Score | 92.17% |
-
-Confusion Matrix:
-
-```
-[[32 10]
- [ 8 106]]
-```
-
-
-## Limitations
-
-⚠️ MedVisionAI is a research and educational project only.
-
-It is not a medical diagnostic system and should not be used for clinical decisions.
-
-The model was trained and evaluated on the BreastMNIST dataset and may not generalize to all real-world ultrasound images, equipment, populations, or clinical environments.
-
-
-# Project Overview
-
-Medical image classification is a challenging computer vision problem due to several factors:
-
-- Limited dataset sizes
-- Class imbalance
-- High risk of overfitting
-- Difficulty extracting meaningful visual features
-
-This project addresses these challenges through:
-
-- Transfer learning from ImageNet pretrained models
-- Data augmentation
-- Class-weighted loss functions
-- Learning rate scheduling
-- Early stopping
-- Comprehensive model evaluation
-
-
-The workflow follows a typical deep learning research pipeline:
-
-```text
-                 BreastMNIST Dataset
-                         |
-                         ↓
-              Dataset Loading & Exploration
-                         |
-                         ↓
-              Image Preprocessing
-        (Resize + Tensor Conversion + Normalization)
-                         |
-                         ↓
-                  Data Augmentation
-        (Random Rotation + Random Translation)
-                         |
-                         ↓
-             Train / Validation / Test Split
-                         |
-                         ↓
-              Model Development Stage
-                         |
-              ┌──────────┴──────────┐
-              ↓                     ↓
-        CNN Baseline        ResNet18 Transfer
-           Model                Learning
-              ↓                     ↓
-     Performance Benchmark   Architecture Adaptation
-                                    |
-                                    ↓
-                         Grayscale Input Modification
-                         RGB (3 Channels) → Grayscale (1 Channel)
-                                    |
-                                    ↓
-                         Replace Classification Head
-                         1000 Classes → 2 Classes
-                                    |
-                                    ↓
-                             Model Training
-                                    |
-                                    ↓
-                      Weighted Cross Entropy Loss
-                                    |
-                                    ↓
-                        Adam Optimizer + Scheduler
-                                    |
-                                    ↓
-                            Early Stopping
-                                    |
-                                    ↓
-                         Best Model Checkpoint
-                                    |
-                                    ↓
-                            Model Evaluation
-                                    |
-                                    ↓
-              Accuracy | Precision | Recall | F1 Score
-                                    |
-                                    ↓
-                         Performance Analysis
-```
-
-
-
-
+The transition from BreastMNIST to BUSI represents the main development progression of the project.
 
 ---
 
 # Dataset
 
-## BreastMNIST
+## BUSI — Breast Ultrasound Images Dataset
 
-This project uses the **BreastMNIST** dataset from the MedMNIST collection.
+The current version of MedVisionAI uses the Breast Ultrasound Images Dataset (BUSI).
+
+The dataset contains breast ultrasound images categorized into:
+
+* Normal
+* Benign
+* Malignant
+
+For this project, the classification task was simplified to binary classification:
+
+| Class     | Label |
+| --------- | ----: |
+| Benign    |     0 |
+| Malignant |     1 |
+
+Normal images were excluded from the current binary classification experiment.
+
+The dataset contains approximately 780 ultrasound images, originally collected from 600 women between the ages of 25 and 75.
 
 Dataset source:
 
-https://medmnist.com/
+https://www.kaggle.com/datasets/sabahesaraki/breast-ultrasound-images-dataset
 
-
-BreastMNIST is a grayscale breast ultrasound image dataset designed for binary classification.
-
-The task is:
-
-| Class | Description |
-|---|---|
-| 0 | Benign |
-| 1 | Malignant |
-
+---
 
 ## Dataset Characteristics
 
-- Medical ultrasound images
-- Grayscale format
-- Binary classification problem
-- Small-scale medical imaging dataset
-- Suitable for machine learning research
+* Breast ultrasound images
+* Grayscale medical images
+* PNG format
+* Binary classification task
+* Small-scale medical imaging dataset
+* Class imbalance between benign and malignant samples
 
+The dataset contains both ultrasound images and segmentation masks. Segmentation mask files were excluded from the classification dataset.
+
+---
+
+# Dataset Splitting
+
+The BUSI dataset was divided into:
+
+```text
+70% Training
+15% Validation
+15% Testing
+```
+
+A fixed random seed was used to make the split reproducible:
+
+```python
+torch.Generator().manual_seed(42)
+```
+
+The training set uses data augmentation, while the validation and test sets use deterministic preprocessing.
+
+```text
+Training Dataset
+        ↓
+Resize
+        ↓
+Random Rotation
+        ↓
+Random Translation
+        ↓
+Tensor Conversion
+        ↓
+Normalization
+```
+
+Validation and test datasets:
+
+```text
+Validation/Test Dataset
+        ↓
+Resize
+        ↓
+Tensor Conversion
+        ↓
+Normalization
+```
 
 ---
 
 # Project Pipeline
 
-The complete pipeline implemented in this project:
-
 ```text
-                 BreastMNIST Dataset
-                         |
-                         ↓
-              Dataset Loading & Exploration
-                         |
-                         ↓
+                BUSI Dataset
+                     ↓
+           Dataset Exploration
+                     ↓
+              Data Cleaning
+                     ↓
+          Remove Segmentation Masks
+                     ↓
+           Binary Classification
+          Benign vs Malignant
+                     ↓
+              Dataset Splitting
+            70% / 15% / 15%
+                     ↓
               Image Preprocessing
-        (Resize + Tensor Conversion + Normalization)
-                         |
-                         ↓
-                  Data Augmentation
-        (Random Rotation + Random Translation)
-                         |
-                         ↓
-             Train / Validation / Test Split
-                         |
-                         ↓
-              Model Development Stage
-                         |
-              ┌──────────┴──────────┐
-              ↓                     ↓
-        CNN Baseline        ResNet18 Transfer
-           Model                Learning
-              ↓                     ↓
-     Performance Benchmark   Architecture Adaptation
-                                    |
-                                    ↓
-                         Grayscale Input Modification
-                         RGB (3 Channels) → Grayscale (1 Channel)
-                                    |
-                                    ↓
-                         Replace Classification Head
-                         1000 Classes → 2 Classes
-                                    |
-                                    ↓
-                             Model Training
-                                    |
-                                    ↓
-                      Weighted Cross Entropy Loss
-                                    |
-                                    ↓
-                        Adam Optimizer + Scheduler
-                                    |
-                                    ↓
-                            Early Stopping
-                                    |
-                                    ↓
-                         Best Model Checkpoint
-                                    |
-                                    ↓
-                            Model Evaluation
-                                    |
-                                    ↓
-              Accuracy | Precision | Recall | F1 Score
-                                    |
-                                    ↓
-                         Performance Analysis
+                     ↓
+              Data Augmentation
+                     ↓
+        ┌────────────┴────────────┐
+        ↓                         ↓
+    CNN Baseline          ResNet18 Transfer
+                              Learning
+                                  ↓
+                       Architecture Adaptation
+                                  ↓
+                       Grayscale Input Support
+                                  ↓
+                       Binary Classification Head
+                                  ↓
+                              Training
+                                  ↓
+                     Weighted Cross Entropy Loss
+                                  ↓
+                         Adam Optimizer
+                                  ↓
+                     Learning Rate Scheduling
+                                  ↓
+                          Early Stopping
+                                  ↓
+                       Best Model Checkpoint
+                                  ↓
+                            Evaluation
+                                  ↓
+            Accuracy | Precision | Recall | F1
+                                  ↓
+                            Grad-CAM
+                                  ↓
+                             Deployment
 ```
-
-
-
 
 ---
 
-# Development Environment
+# Model Development
 
-The project was developed using:
+Two main approaches were explored.
 
+## 1. Custom CNN Baseline
 
-| Component | Version |
-|---|---|
-| Python | 3.12 |
-| PyTorch | Latest |
-| Torchvision | Latest |
-| Scikit-learn | Latest |
-| MedMNIST | Latest |
-| Hardware | Apple Silicon |
-| Acceleration | Apple Metal Performance Shaders (MPS) |
+A custom convolutional neural network was developed as an initial baseline.
 
+The purpose of the CNN was to:
 
-The model was trained using Apple's GPU acceleration:
+* Establish an initial performance benchmark
+* Test the classification pipeline
+* Understand the difficulty of the dataset
+* Compare training from scratch with transfer learning
 
-Using device: mps
+The CNN baseline provided a reference point for evaluating the benefits of pretrained models.
 
-This allowed training with hardware acceleration on an Apple Silicon Mac.
+---
 
+## 2. ResNet18 Transfer Learning
+
+The primary model uses ResNet18.
+
+Instead of training a deep neural network entirely from scratch, the model uses visual features learned from ImageNet and adapts the architecture for grayscale breast ultrasound classification.
+
+Transfer learning was selected because medical imaging datasets are often relatively small compared with datasets such as ImageNet.
+
+Potential advantages include:
+
+* Faster convergence
+* Reuse of learned visual features
+* Improved feature extraction
+* Reduced need for extremely large datasets
+
+---
+
+# ResNet18 Architecture Adaptation
+
+The original ResNet18 architecture expects RGB images.
+
+```text
+Original Input:
+
+RGB Image
+   ↓
+3 Channels
+   ↓
+ResNet18
+   ↓
+1000 ImageNet Classes
+```
+
+The MedVisionAI model was adapted for grayscale ultrasound images:
+
+```text
+Grayscale Ultrasound Image
+   ↓
+1 Channel
+   ↓
+Modified ResNet18
+   ↓
+Feature Extraction
+   ↓
+2-Class Classifier
+   ↓
+Benign / Malignant
+```
+
+---
+
+## Grayscale Input Modification
+
+The original ResNet18 first convolutional layer expects three input channels:
+
+```python
+Conv2d(
+    in_channels=3,
+    out_channels=64
+)
+```
+
+The model was modified to accept a single grayscale channel:
+
+```python
+Conv2d(
+    in_channels=1,
+    out_channels=64
+)
+```
+
+To initialize the grayscale convolution using the pretrained RGB filters, the RGB weights were averaged across the channel dimension to produce a single-channel initialization.
+
+```python
+new_conv.weight[:] = old_conv.weight.mean(
+    dim=1,
+    keepdim=True
+)
+```
+
+This produces a single-channel convolutional layer initialized using the pretrained RGB filters.
+
+---
+
+## Classification Head
+
+The original ResNet18 model was designed for ImageNet classification:
+
+```text
+1000 Classes
+```
+
+The final classification layer was replaced with a binary classifier:
+
+```python
+self.model.fc = nn.Sequential(
+    nn.Dropout(0.4),
+    nn.Linear(
+        self.model.fc.in_features,
+        2
+    )
+)
+```
+
+The output classes are:
+
+```text
+0 → Benign
+1 → Malignant
+```
+
+---
+
+# Transfer Learning Strategy
+
+The model initially freezes the pretrained ResNet18 parameters.
+
+Selected deeper layers are then fine-tuned:
+
+```text
+Frozen:
+- Initial layers
+- Layer 1
+
+Trainable:
+- Layer 2
+- Layer 3
+- Layer 4
+- Classification Head
+```
+
+This allows the model to preserve general visual features while adapting deeper feature representations to the breast ultrasound classification task.
+
+---
+
+# Image Preprocessing
+
+The original BUSI images have significantly larger dimensions than the 224 × 224 input size expected by ResNet18.
+
+Images are resized to:
+
+```text
+224 × 224 pixels
+```
+
+The images are then converted to tensors and normalized.
+
+The current preprocessing pipeline is:
+
+```text
+Original Ultrasound Image
+        ↓
+Grayscale Conversion
+        ↓
+Resize to 224 × 224
+        ↓
+Tensor Conversion
+        ↓
+Normalization
+        ↓
+ResNet18
+```
+
+---
+
+# Data Augmentation
+
+To reduce overfitting and improve robustness, the training dataset uses augmentation.
+
+## Random Rotation
+
+```python
+transforms.RandomRotation(
+    degrees=5
+)
+```
+
+This introduces small changes in orientation.
+
+---
+
+## Random Translation
+
+```python
+transforms.RandomAffine(
+    degrees=0,
+    translate=(0.05, 0.05)
+)
+```
+
+This introduces small positional changes.
+
+The validation and test datasets are not augmented.
+
+---
+
+# Training Strategy
+
+The training pipeline includes several optimization techniques.
+
+## Weighted Cross Entropy Loss
+
+The BUSI dataset contains class imbalance.
+
+To reduce bias toward the majority class, weighted cross-entropy loss was used:
+
+```python
+CrossEntropyLoss(
+    weight=class_weights
+)
+```
+
+This increases the contribution of underrepresented classes during training.
+
+---
+
+## Optimizer
+
+The model is trained using Adam.
+
+The learning rate is adjusted during training based on validation performance.
+
+---
+
+## Learning Rate Scheduling
+
+A `ReduceLROnPlateau` scheduler is used to reduce the learning rate when validation performance stops improving.
+
+The scheduler allows the model to make smaller updates when training approaches a plateau.
+
+---
+
+## Early Stopping
+
+Early stopping is used to reduce overfitting.
+
+Training stops when validation performance fails to improve for a predefined number of epochs.
+
+The checkpoint with the best validation F1 score is saved.
+
+```text
+Training
+   ↓
+Validation F1 Improves
+   ↓
+Save Best Checkpoint
+   ↓
+Validation Stops Improving
+   ↓
+Reduce Learning Rate
+   ↓
+Continue Training
+   ↓
+Early Stopping
+```
+
+---
+
+# Model Evaluation
+
+The model is evaluated using:
+
+* Accuracy
+* Precision
+* Recall
+* F1 Score
+* Confusion Matrix
+
+The F1 score is particularly important because the dataset contains class imbalance and because both precision and recall are important for the classification task.
+
+---
+
+# BUSI Model Performance
+
+The final reported BUSI results should be kept as a separate experimental result from the BreastMNIST results.
+
+At the time of writing, the BUSI model achieved:
+
+| Metric    |  Score |
+| --------- | -----: |
+| Accuracy  | 88.78% |
+| Precision | 77.78% |
+| Recall    | 80.77% |
+| F1 Score  | 79.25% |
+
+Confusion Matrix:
+
+```text
+[[66  6]
+ [ 5 21]]
+```
+
+Interpretation:
+
+```text
+66 benign images were correctly classified.
+
+21 malignant images were correctly classified.
+
+6 benign images were incorrectly classified as malignant.
+
+5 malignant images were incorrectly classified as benign.
+```
+
+> These results should be interpreted in the context of the relatively small dataset and the specific train-validation-test split used in this experiment.
+
+---
+
+# BreastMNIST Version 1 Results
+
+The original BreastMNIST experiment achieved:
+
+| Metric    |  Score |
+| --------- | -----: |
+| Accuracy  | 88.46% |
+| Precision | 91.38% |
+| Recall    | 92.98% |
+| F1 Score  | 92.17% |
+
+Confusion Matrix:
+
+```text
+[[32 10]
+ [ 8 106]]
+```
+
+These results belong to the original BreastMNIST experiment and should not be presented as the BUSI model's results.
+
+---
+
+# Why the Results Should Not Be Directly Compared
+
+The BreastMNIST and BUSI experiments use different datasets.
+
+They differ in:
+
+* Dataset size
+* Image resolution
+* Data distribution
+* Class composition
+* Dataset splitting
+* Image characteristics
+
+Therefore, the performance metrics should not be interpreted as a direct benchmark between the two models.
+
+The purpose of the two versions is to demonstrate the evolution of the project:
+
+```text
+Version 1:
+BreastMNIST
+   ↓
+Initial Experimentation
+   ↓
+Model Development
+
+Version 2:
+BUSI
+   ↓
+More Realistic Ultrasound Dataset
+   ↓
+Custom Dataset Pipeline
+   ↓
+Further Transfer Learning Experiments
+```
+
+---
+
+# Explainable AI — Grad-CAM
+
+MedVisionAI integrates Gradient-weighted Class Activation Mapping (Grad-CAM).
+
+Grad-CAM generates a heatmap showing regions of an image that contributed to the model's prediction.
+
+```text
+Ultrasound Image
+        ↓
+ResNet18
+        ↓
+Prediction
+        ↓
+Gradient Analysis
+        ↓
+Grad-CAM Heatmap
+        ↓
+Important Image Regions
+```
+
+Grad-CAM is useful because classification accuracy alone does not explain why a model made a prediction.
+
+---
+
+## Correct Classification Example
+
+![Correct Grad-CAM](screenshots/gradcam_correct.png)
+
+Example:
+
+```text
+Prediction: Malignant
+Confidence: 97.11%
+True Label: Malignant
+```
+
+---
+
+## Misclassification Example
+
+![Wrong Grad-CAM](screenshots/gradcam_wrong_prediction.png)
+
+Example:
+
+```text
+Prediction: Malignant
+Confidence: 76.51%
+True Label: Benign
+```
+
+This demonstrates that the model can make incorrect predictions, even with relatively high confidence.
+
+This is one reason model explainability and external validation are important in medical AI research.
+
+---
+
+# Deployment
+
+The application is deployed using Streamlit Community Cloud.
+
+```text
+GitHub Repository
+        ↓
+Streamlit Community Cloud
+        ↓
+MedVisionAI Web Application
+        ↓
+Image Upload
+        ↓
+Preprocessing
+        ↓
+ResNet18 Inference
+        ↓
+Prediction
+        ↓
+Confidence Score
+        ↓
+Optional Grad-CAM Visualization
+```
+
+The application provides:
+
+* Image upload
+* Benign/malignant classification
+* Confidence score
+* Optional Grad-CAM visualization
+* Research and educational disclaimer
 
 ---
 
@@ -334,22 +730,24 @@ MedVisionAI/
 │
 ├── models/
 │   └── checkpoints/
-│       ├── resnet18_finetuned_v2.pth
-│       └── cnn_optimized.pth
+│       ├── resnet18_breastmnist_final_best_f1.pth
+│       └── resnet18_busi_final.pth
 │
 ├── notebooks/
 │   └── 01_dataset_exploration.ipynb
 │
 ├── scripts/
-│   ├── test_dataloader.py
-│   ├── test_model.py
+│   ├── predict.py
+│   ├── evaluate_busi.py
+│   ├── evaluate_resnet.py
 │   └── __init__.py
 │
 ├── src/
 │   │
 │   ├── data/
 │   │   ├── dataloader.py
-│   │   └── resnet_dataloader.py
+│   │   ├── resnet_dataloader.py
+│   │   └── busi_dataset.py
 │   │
 │   ├── models/
 │   │   ├── cnn.py
@@ -359,12 +757,12 @@ MedVisionAI/
 │   │   ├── train.py
 │   │   └── train_resnet.py
 │   │
-│   ├── evaluate/
-│   │   ├── evaluate.py
-│   │   └── evaluate_resnet.py
+│   ├── explainability/
+│   │   └── gradcam_utils.py
 │   │
 │   └── __init__.py
 │
+├── app.py
 ├── .gitignore
 ├── LICENSE
 ├── README.md
@@ -373,795 +771,31 @@ MedVisionAI/
 
 ---
 
-## Directory Explanation
-
-### `models/`
-
-Contains trained model checkpoints.
-
-```
-models/checkpoints/
-```
-
-Stores saved weights for trained models:
-
-- `resnet18_finetuned_v2.pth`  
-  Final ResNet18 transfer learning model
-
-- `cnn_optimized.pth`  
-  Baseline CNN model checkpoint
-
-
----
-
-### `notebooks/`
-
-Contains Jupyter notebooks used for experimentation and analysis.
-
-Current notebook:
-
-```
-01_dataset_exploration.ipynb
-```
-
-Used for:
-
-- Exploring BreastMNIST samples
-- Understanding dataset distribution
-- Initial experimentation
-
-
----
-
-### `scripts/`
-
-Contains utility scripts for testing project components.
-
-Examples:
-
-- Testing dataset loading
-- Verifying model architecture
-- Checking preprocessing pipeline
-
-
----
-
-### `src/data/`
-
-Contains dataset handling and preprocessing code.
-
-Files:
-
-`dataloader.py`
-
-- Loads BreastMNIST dataset
-- Handles baseline CNN data preparation
-
-
-`resnet_dataloader.py`
-
-- Prepares data specifically for ResNet18
-- Applies resizing, augmentation, and normalization
-
-
----
-
-### `src/models/`
-
-Contains deep learning model architectures.
-
-Files:
-
-`cnn.py`
-
-- Custom CNN baseline architecture
-
-
-`resnet.py`
-
-- Modified ResNet18 transfer learning architecture
-- Converts RGB input to grayscale
-- Replaces ImageNet classifier with binary classifier
-
-
----
-
-### `src/train/`
-
-Contains training scripts.
-
-Files:
-
-`train.py`
-
-- Trains the baseline CNN model
-
-
-`train_resnet.py`
-
-- Trains the ResNet18 transfer learning model
-- Handles:
-  - Weighted loss
-  - Learning rate scheduling
-  - Early stopping
-  - Model checkpoint saving
-
-
----
-
-### `src/evaluate/`
-
-Contains evaluation scripts.
-
-Files:
-
-`evaluate.py`
-
-- Evaluates baseline CNN performance
-
-
-`evaluate_resnet.py`
-
-- Evaluates the final ResNet18 model
-- Calculates:
-  - Accuracy
-  - Precision
-  - Recall
-  - F1 Score
-  - Confusion Matrix
-
-
----
-
-### Root Files
-
-`README.md`
-
-Project documentation.
-
-
-`requirements.txt`
-
-Python dependencies required to run the project.
-
-
-`LICENSE`
-
-Project licensing information.
-
-
-`.gitignore`
-
-Specifies files excluded from version control.
-
-
-
-## Directory Explanation
-
-
-### `models/`
-
-Contains trained model checkpoints.
-
-Example:
-
--resnet18_finetuned_v2.pth
-
-Stores the best-performing ResNet18 model weights.
-
-
----
-
-### `src/data/`
-
-Contains dataset loading and preprocessing pipelines.
-
-
-Files:
-
--dataloader.py
-
-Handles the CNN baseline data pipeline.
-
--resnet_dataloader.py
-
-Handles:
-
-- Image resizing
-- Augmentation
-- Normalization
-- Train/validation/test loading
-
-
----
-
-### `src/models/`
-
-Contains model architectures.
-
--cnn.py
-
-Custom CNN baseline model.
-
--resnet.py
-
-Modified ResNet18 transfer learning model.
-
-
----
-
-### `src/train/`
-
-Training scripts.
-
--train.py
-
-CNN baseline training.
-
--train_resnet.py
-
-Final ResNet18 training pipeline.
-
-
----
-
-### `src/evaluate/`
-
-Evaluation scripts.
-
--evaluate.py
-
-CNN evaluation.
-
--evaluate_resnet.py
-
-ResNet18 evaluation using:
-
-- Accuracy
-- Precision
-- Recall
-- F1-score
-- Confusion matrix
-
-
-# Models
-
-Two different deep learning approaches were explored during development:
-
-1. Custom CNN Baseline Model
-2. ResNet18 Transfer Learning Model
-
-
----
-
-# 1. CNN Baseline Model
-
-A custom Convolutional Neural Network (CNN) was initially developed as a baseline model.
-
-The purpose of the baseline model was to:
-
-- Establish an initial performance benchmark
-- Understand the difficulty of the dataset
-- Compare traditional CNN training against transfer learning
-
-
-## Baseline Performance
-
-The CNN baseline achieved approximately:
-Validation Accuracy:
-~77%
-
-
-Although the CNN was able to learn meaningful patterns from the ultrasound images, the small dataset size limited generalization performance.
-
-This motivated the use of transfer learning with a pretrained architecture.
-
-
----
-
-# 2. ResNet18 Transfer Learning Model
-
-The final model uses **ResNet18 transfer learning**.
-
-Instead of training a deep neural network from scratch, the model uses features learned from ImageNet and adapts them for breast ultrasound image classification.
-
-
-Transfer learning provides several advantages:
-
-- Better feature extraction
-- Faster convergence
-- Improved performance on small datasets
-- Reduced risk of overfitting
-
-
----
-
-# ResNet18 Architecture Modification
-
-The original ResNet18 model was designed for RGB image classification.
-
-Original architecture:
+# Development Environment
+
+| Component    | Details                         |
+| ------------ | -------------------------------- |
+| Python       | 3.12                            |
+| PyTorch      | PyTorch                         |
+| Torchvision  | Torchvision                     |
+| Scikit-learn | Scikit-learn                    |
+| Streamlit    | Streamlit                       |
+| Hardware     | Apple Silicon                   |
+| Acceleration | Apple Metal Performance Shaders |
+
+Training was performed using Apple's Metal Performance Shaders acceleration:
 
 ```text
-RGB Image
-
-3 Channels
-
-        ↓
-
-ResNet18
-
-        ↓
-
-1000 ImageNet Classes
-
-However, BreastMNIST images are grayscale ultrasound images.
-
-Therefore, the architecture was modified:
-
-Grayscale Ultrasound Image
-
-1 Channel
-
-        ↓
-
-Modified ResNet18
-
-        ↓
-
-Binary Classifier
-
-        ↓
-
-Benign / Malignant
-
-# Input Layer Modification
-
-## Original ResNet18
-
-The original ResNet18 architecture was designed for RGB images.
-
-The first convolution layer expects 3 input channels:
-
-```python
-Conv2d(
-    3,
-    64
-)
+Using device: mps
 ```
 
-This corresponds to:
-
-```
-Red Channel
-Green Channel
-Blue Channel
-```
-
-However, BreastMNIST images are grayscale ultrasound images, meaning they contain only one image channel.
-
-
----
-
-## Modified ResNet18
-
-The first convolution layer was modified to accept single-channel grayscale images:
-
-```python
-Conv2d(
-    1,
-    64
-)
-```
-
-The modified input pipeline becomes:
-
-```text
-Grayscale Ultrasound Image
-
-        ↓
-
-1 Input Channel
-
-        ↓
-
-Modified ResNet18
-
-        ↓
-
-Feature Extraction
-
-        ↓
-
-Binary Classification
-```
-
-To preserve the pretrained ImageNet features, the original RGB convolution filters were converted into grayscale filters by averaging the RGB weights:
-
-```python
-new_conv.weight[:] = old_conv.weight.mean(
-    dim=1,
-    keepdim=True
-)
-```
-
-This allows the model to reuse previously learned visual features while adapting the network for medical grayscale images.
-
-
----
-
-# Classification Head Modification
-
-The original ResNet18 model was trained for ImageNet classification:
-
-```
-1000 ImageNet Classes
-```
-
-For this project, the final classification layer was replaced with a binary classifier:
-
-
-```
-2 Classes
-
-0 → Benign
-
-1 → Malignant
-```
-
-
-Implementation:
-
-```python
-self.model.fc = nn.Linear(
-    self.model.fc.in_features,
-    2
-)
-```
-
-
----
-
-# Data Preprocessing
-
-BreastMNIST images are originally:
-
-```
-28 × 28 pixels
-```
-
-Since ResNet18 was pretrained on ImageNet, images were resized to:
-
-```
-224 × 224 pixels
-```
-
-This allows the model to use the same input dimensions it learned during pretraining.
-
-
----
-
-# Normalization
-
-Image normalization was applied before training:
-
-```python
-mean=[0.4829]
-
-std=[0.229]
-```
-
-Normalization helps:
-
-- Stabilize training
-- Improve convergence
-- Match the distribution expected by pretrained models
-
-
----
-
-# Data Augmentation
-
-Medical image datasets are often limited in size, increasing the risk of overfitting.
-
-To improve generalization, training images were augmented using:
-
-
-## Random Rotation
-
-```python
-RandomRotation(
-    degrees=5
-)
-```
-
-Purpose:
-
-- Simulates small changes in image orientation
-- Makes the model less sensitive to rotation variations
-
-
----
-
-## Random Translation
-
-```python
-RandomAffine(
-    degrees=0,
-    translate=(0.05,0.05)
-)
-```
-
-Purpose:
-
-- Simulates slight changes in image position
-- Improves robustness against image alignment differences
-
-
-Validation and test datasets were not augmented to ensure unbiased evaluation.
-
-
----
-
-# Training Strategy
-
-The final training pipeline included:
-
-
-## Weighted Cross Entropy Loss
-
-The dataset contains class imbalance, therefore weighted Cross Entropy Loss was used:
-
-```python
-CrossEntropyLoss(
-    weight=class_weights
-)
-```
-
-Class weighting helps the model pay more attention to underrepresented samples and reduces bias toward the majority class.
-
-
----
-
-## Optimizer
-
-The model was trained using the Adam optimizer:
-
-```python
-Adam
-```
-
-Learning rate:
-
-```
-0.0001
-```
-
-Adam was selected because it provides adaptive learning rates and performs well for deep learning image classification tasks.
-
-
----
-
-## Learning Rate Scheduler
-
-A ReduceLROnPlateau scheduler was used:
-
-```python
-ReduceLROnPlateau
-```
-
-Configuration:
-
-```
-factor = 0.5
-
-patience = 3
-```
-
-The scheduler automatically reduces the learning rate when validation performance stops improving.
-
-
----
-
-## Early Stopping
-
-Early stopping was implemented to prevent overfitting.
-
-Configuration:
-
-```
-Maximum epochs: 50
-
-Patience: 10 epochs
-```
-
-During training, the model automatically saves the checkpoint with the best validation performance:
-
-```
-Saved best model!
-```
-
-
----
-
-# Model Checkpoint
-
-The final trained model is saved as:
-
-```
-models/checkpoints/resnet18_finetuned_v2.pth
-```
-
-The saved checkpoint contains the learned model weights and can be loaded later for evaluation or inference.
-
-# Final Model Performance
-
-After training and optimization, the final ResNet18 transfer learning model achieved strong performance on the BreastMNIST test dataset.
-
-
-## Final Test Results
-
-The final ResNet18 transfer learning model achieved:
-
-| Metric | Score |
-|---|---:|
-| Accuracy | 88.46% |
-| Precision | 91.38% |
-| Recall | 92.98% |
-| F1 Score | 92.17% |
-
-
-Confusion Matrix:
-
-\[
-\begin{bmatrix}
-32 & 10 \\
-8 & 106
-\end{bmatrix}
-\]
-
-
-Interpretation:
-
-- 32 benign samples were correctly classified
-- 106 malignant samples were correctly classified
-- 10 benign samples were incorrectly classified as malignant
-- 8 malignant samples were incorrectly classified as benign
-
-
----
-
-
-# Metric Interpretation
-
-
-## Accuracy
-
-Accuracy measures the percentage of all correctly classified images:
-
-
-```
-Correct Predictions / Total Predictions
-```
-
-
-The model achieved:
-
-
-```
-84.62%
-```
-
-
----
-
-## Precision
-
-Precision measures how many predicted malignant cases were actually malignant:
-
-
-```
-True Positives / (True Positives + False Positives)
-```
-
-
-Result:
-
-
-```
-88.79%
-```
-
-
-A high precision means the model produces relatively few false positive malignant predictions.
-
-
----
-
-## Recall
-
-Recall measures how many actual malignant cases were successfully detected:
-
-
-```
-True Positives / (True Positives + False Negatives)
-```
-
-
-Result:
-
-
-```
-90.35%
-```
-
-
-High recall is important in medical screening because missing malignant cases is more costly than producing additional false alarms.
-
-
----
-
-## F1 Score
-
-The F1 score balances precision and recall:
-
-
-```
-2 × (Precision × Recall) / (Precision + Recall)
-```
-
-
-Result:
-
-
-```
-89.57%
-```
-
-
-The strong F1 score indicates a good balance between detecting malignant cases and avoiding unnecessary false positives.
-
-
----
-
-# Training Performance
-
-The best validation performance achieved during training:
-
-
-```
-Best Validation F1 Score:
-
-0.9550
-```
-
-
-Training progression:
-
-
-```
-Epoch 1:
-
-Validation F1:
-0.7447
-
-
-Epoch 3:
-
-Validation F1:
-0.9550
-```
-
-
-The model achieved strong performance early because transfer learning allowed ResNet18 to reuse previously learned visual features.
-
+This enabled GPU acceleration on Apple Silicon hardware.
 
 ---
 
 # Installation
 
-
-## Clone Repository
+## Clone the Repository
 
 ```bash
 git clone https://github.com/DunatosCharles/MedVisionAI.git
@@ -1169,25 +803,21 @@ git clone https://github.com/DunatosCharles/MedVisionAI.git
 cd MedVisionAI
 ```
 
-
 ---
 
-## Create Virtual Environment
+## Create a Virtual Environment
 
 ```bash
 python -m venv clean_test
 ```
 
-
-Activate the environment:
-
+Activate it:
 
 ### macOS / Linux
 
 ```bash
 source clean_test/bin/activate
 ```
-
 
 ---
 
@@ -1197,397 +827,410 @@ source clean_test/bin/activate
 pip install -r requirements.txt
 ```
 
-
 ---
 
 # Training
 
 To train the ResNet18 model:
 
-
 ```bash
 python -m src.train.train_resnet
 ```
 
+The training process includes:
 
-Example training output:
-
-
-```text
-Using device: mps
-
-Epoch 3/50 |
-Train Acc: 0.8608 |
-Val Acc: 0.9359 |
-Val F1: 0.9550
-
-Saved best model!
-```
-
-
-The best checkpoint is automatically saved:
-
-```
-models/checkpoints/resnet18_finetuned_v2.pth
-```
-
+* Dataset loading
+* Data augmentation
+* Weighted loss
+* Model training
+* Learning-rate scheduling
+* Validation
+* Early stopping
+* Checkpoint saving
 
 ---
 
 # Evaluation
 
-To evaluate the trained model:
-
-
-```bash
-python -m src.evaluate.evaluate_resnet
-```
-
-
-Example output:
-
-
-```text
-Accuracy: 0.8461
-
-Precision: 0.8879
-
-Recall: 0.9035
-
-F1: 0.8957
-```
-
-
-The evaluation script also generates a confusion matrix showing classification performance across both classes.
-
-
----
-
-# Model Explainability
-
-To improve interpretability, Grad-CAM was implemented to visualize which regions of the ultrasound image influenced the model prediction.
-
-Grad-CAM generates a heatmap over the input image, highlighting important feature regions used by the ResNet18 model.
-
-Example:
-
-## Grad-CAM Explainability
-
-Grad-CAM was implemented to visualize the regions of the ultrasound image that influenced the model prediction.
-
-### Correct Classification Example
-
-![Correct Grad-CAM](screenshots/gradcam_correct.png)
-
-
-Example output:
-
-Prediction: Malignant
-Confidence: 97.11%
-True Label: Malignant
-
-### Misclassification Example
-
-The model can still make incorrect predictions due to the limited size and complexity of the dataset.
-
-![Wrong Grad-CAM](screenshots/gradcam_wrong_prediction.png)
-
-
-Example output:
-
-Prediction: Malignant
-Confidence: 76.51%
-True Label: Benign
-
-
-This highlights the importance of explainability methods when analyzing medical AI models.
-
-# Model Inference
-
-The trained model can be used for prediction on new ultrasound images.
-
-Example:
+To evaluate the BUSI model:
 
 ```bash
-python -m scripts.predict screenshots/gradcam_example.png
-
-# Model Loading
-
-The trained model can be loaded using:
-
-
-```python
-model.load_state_dict(
-    torch.load(
-        "models/checkpoints/resnet18_finetuned_v2.pth"
-    )
-)
+python -m scripts.evaluate_busi
 ```
 
-
-The model can then be used for:
-
-- Testing new ultrasound images
-- Building inference pipelines
-- Integrating into applications
-
-
----
-
-# Reproducibility
-
-The project includes:
-
-- Dataset loading scripts
-- Training scripts
-- Evaluation scripts
-- Saved model checkpoints
-
-
-The complete workflow can be reproduced by:
-
-1. Installing dependencies
-2. Running the training script
-3. Loading the saved checkpoint
-4. Running evaluation
-
-# Future Improvements
-
-Although the current model achieves strong performance, there are several possible improvements that could make the system more robust and practical.
-
-
----
-
-# 1. Grad-CAM Visualization
-
-A future improvement would be adding **Gradient-weighted Class Activation Mapping (Grad-CAM)**.
-
-Grad-CAM allows visualization of which regions of an ultrasound image influenced the model's prediction.
-
-
-Possible workflow:
-
+The evaluation script calculates:
 
 ```text
-Ultrasound Image
-
-        +
-
-Trained ResNet18 Model
-
-        ↓
-
-Prediction
-
-        ↓
-
-Grad-CAM Heatmap
-
-        ↓
-
-Highlighted Important Regions
+Accuracy
+Precision
+Recall
+F1 Score
+Confusion Matrix
 ```
-
-
-Benefits:
-
-- Improves model interpretability
-- Helps understand model decisions
-- Provides visual explanations for predictions
-
 
 ---
 
-# 2. Web Application Deployment
+# Inference
 
-The trained model could be integrated into an interactive application.
+The trained model can be used to classify new ultrasound images.
 
+```bash
+python -m scripts.predict
+```
 
-Possible features:
-
-- Upload ultrasound image
-- Generate prediction
-- Display confidence score
-- Display Grad-CAM explanation
-- Provide model information
-
-
-Possible technologies:
-
-- Streamlit
-- FastAPI
-- React frontend
-
-
-Example workflow:
-
+The inference pipeline:
 
 ```text
-User Uploads Image
-
-        ↓
-
-Image Preprocessing
-
-        ↓
-
-ResNet18 Model
-
-        ↓
-
+Input Image
+     ↓
+Grayscale Conversion
+     ↓
+Resize
+     ↓
+Normalization
+     ↓
+ResNet18
+     ↓
+Softmax Probabilities
+     ↓
 Prediction
-
-        ↓
-
-Result + Explanation
+     ↓
+Confidence Score
 ```
 
-
 ---
 
-# 3. Experiment With Larger Architectures
+# Training Curves
 
-Future experiments could compare ResNet18 with more advanced architectures:
+The project includes training visualizations such as:
 
-
-Possible models:
-
-- ResNet50
-- EfficientNet
-- Vision Transformers (ViT)
-- ConvNeXt
-
-
-These models may improve performance by learning more complex visual patterns.
-
-
----
-
-# 4. Cross Validation
-
-Because medical datasets are often small, a single train-validation-test split may not fully represent model performance.
-
-Future work could include:
-
-- K-fold cross validation
-- Multiple training runs
-- Statistical performance analysis
-
-
-This would provide a more reliable estimate of model generalization.
-
-
----
-
-# 5. Model Optimization
-
-Additional improvements could include:
-
-
-## Hyperparameter Optimization
-
-Experimenting with:
-
-- Learning rates
-- Batch sizes
-- Optimizers
-- Data augmentation strength
-
-
-## Advanced Augmentation
-
-Testing methods such as:
-
-- Random cropping
-- Contrast adjustment
-- Gaussian noise
-- MixUp
-- CutMix
-
-
-## Ensemble Methods
-
-Combining multiple models could improve prediction stability.
-
-
----
-
-## Training Curves
-
-### Loss
+### Training Loss
 
 ![Training Loss](screenshots/training_loss.png)
 
 ### Accuracy
 
-![Accuracy](screenshots/accuracy_curve.png)
+![Accuracy Curve](screenshots/accuracy_curve.png)
 
-### Validation F1
+### Validation F1 Score
 
 ![F1 Score](screenshots/f1_curve.png)
 
+These visualizations help analyze:
+
+* Convergence
+* Overfitting
+* Validation performance
+* Learning-rate effects
+
+---
+
+# Limitations
+
+Several limitations should be considered.
+
+## Dataset Size
+
+The BUSI dataset is relatively small compared with large-scale computer vision datasets.
+
+This increases the risk of:
+
+* Overfitting
+* High variance between train/test splits
+* Unstable performance estimates
+
+---
+
+## Dataset Splitting
+
+The reported BUSI results are based on a single randomized train-validation-test split.
+
+Therefore, the results may change with a different split.
+
+Future experiments should investigate:
+
+* Stratified splitting
+* K-fold cross-validation
+* Multiple random seeds
+* Confidence intervals
+
+---
+
+## Generalization
+
+The model may not generalize reliably to:
+
+* Different ultrasound machines
+* Different hospitals
+* Different patient populations
+* Different image acquisition protocols
+* Different image preprocessing pipelines
+
+---
+
+## Medical Use
+
+The model is not clinically validated.
+
+It should not be used to:
+
+* Diagnose patients
+* Replace radiologists
+* Make treatment decisions
+* Provide medical advice
+
+---
+
+# Future Work
+
+## 1. Cross-Validation
+
+Because the dataset is relatively small, K-fold cross-validation would provide a more reliable estimate of model performance.
+
+Potential experiments include:
+
+```text
+Dataset
+   ↓
+K-Fold Split
+   ↓
+Train Model Multiple Times
+   ↓
+Evaluate Each Fold
+   ↓
+Calculate Mean ± Standard Deviation
+```
+
+---
+
+## 2. Patient-Level Data Splitting
+
+If patient identifiers are available, future experiments should ensure that images from the same patient do not appear across multiple dataset splits.
+
+This would help reduce potential data leakage.
+
+---
+
+## 3. Larger Architectures
+
+Future models could include:
+
+* ResNet50
+* EfficientNet
+* ConvNeXt
+* Vision Transformers
+
+These models could be compared against ResNet18.
+
+---
+
+## 4. Hyperparameter Optimization
+
+Future experiments could investigate:
+
+* Learning rates
+* Batch sizes
+* Optimizers
+* Weight decay
+* Dropout rates
+* Fine-tuning depth
+
+---
+
+## 5. Advanced Augmentation
+
+Possible future techniques include:
+
+* Contrast adjustment
+* Gaussian noise
+* Random cropping
+* MixUp
+* CutMix
+
+However, augmentation strategies should be carefully evaluated for medical images to ensure that they do not create unrealistic samples.
+
+---
+
+## 6. Segmentation-Based Classification
+
+The BUSI dataset includes segmentation masks.
+
+A future experiment could investigate whether explicitly using lesion segmentation improves classification performance.
+
+Possible pipeline:
+
+```text
+Ultrasound Image
+        ↓
+Lesion Segmentation
+        ↓
+Region of Interest Extraction
+        ↓
+Classification
+        ↓
+Benign / Malignant
+```
+
+---
+
+## 7. External Validation
+
+A major future improvement would be evaluating the model on an independent external dataset.
+
+This would provide a better estimate of generalization to unseen data distributions.
+
+---
+
+## 8. Model Calibration
+
+Future work could evaluate whether the model's confidence scores are reliable.
+
+A model predicting:
+
+```text
+95% confidence
+```
+
+should ideally be correct approximately 95% of the time under similar conditions.
+
+Calibration methods could include:
+
+* Reliability diagrams
+* Expected Calibration Error
+* Temperature scaling
+
+---
+
+# Research Direction
+
+The project is currently evolving from a benchmark-oriented experiment toward a more realistic medical imaging research workflow.
+
+The main development progression is:
+
+```text
+BreastMNIST
+    ↓
+Initial CNN Experiments
+    ↓
+ResNet18 Transfer Learning
+    ↓
+Grayscale Architecture Adaptation
+    ↓
+BUSI Dataset
+    ↓
+Custom Dataset Pipeline
+    ↓
+Fine-Tuning Experiments
+    ↓
+Grad-CAM Explainability
+    ↓
+Web Deployment
+    ↓
+Future External Validation
+```
+
+The main objective is not simply to maximize a single test score.
+
+Instead, the project aims to explore:
+
+* How pretrained computer vision models can be adapted to medical imaging
+* How dataset choice affects model performance
+* How class imbalance affects training
+* How model architecture and fine-tuning strategies influence generalization
+* How explainability methods can help analyze model predictions
+* How to build reproducible medical AI experiments
+
+---
+
 # Disclaimer
 
-This project is developed for **educational and research purposes only**.
+MedVisionAI is developed for educational and research purposes only.
 
-It is **not a medical diagnostic system** and should not be used for real clinical decision-making.
+It is not a medical diagnostic system.
 
-The predictions generated by this model should not replace professional medical evaluation, imaging specialists, or healthcare professionals.
+The predictions generated by this model should not replace:
 
+* Medical professionals
+* Radiologists
+* Clinical evaluation
+* Professional diagnostic procedures
+
+The model has not been clinically validated and should not be used for real-world medical decision-making.
 
 ---
 
 # Author
 
-**Dunatos Charles**
+## Dunatos Charles
 
-Machine Learning / Computer Vision Developer
+Machine Learning and Computer Vision Developer
 
+### Interests
 
-## Interests
-
-- Artificial Intelligence
-- Deep Learning
-- Computer Vision
-- Medical AI
-- Machine Learning Research
-
+* Artificial Intelligence
+* Deep Learning
+* Computer Vision
+* Medical AI
+* Machine Learning Research
+* Explainable AI
 
 ---
 
 # Project Summary
 
-MedVisionAI demonstrates the application of deep learning and transfer learning techniques for medical image classification.
+MedVisionAI demonstrates the development of a complete deep learning medical imaging pipeline.
 
-The project covers the complete machine learning workflow:
+The project evolved from an initial BreastMNIST experiment into a more advanced BUSI-based experiment involving:
 
 ```text
-Dataset Preparation
-
+Dataset Exploration
         ↓
-
-Image Processing
-
+Data Preprocessing
         ↓
-
-Model Development
-
+CNN Baseline
         ↓
-
 Transfer Learning
-
         ↓
-
-Training Optimization
-
+ResNet18 Adaptation
         ↓
-
-Evaluation
-
+Data Augmentation
         ↓
-
-Performance Analysis
+Class-Imbalanced Training
+        ↓
+Learning-Rate Scheduling
+        ↓
+Early Stopping
+        ↓
+Model Evaluation
+        ↓
+Grad-CAM Explainability
+        ↓
+Streamlit Deployment
 ```
 
+The project serves as a foundation for future research into:
 
-The project serves as a foundation for exploring more advanced medical AI systems and explainable deep learning solutions.
+* Medical image classification
+* Transfer learning
+* Explainable AI
+* Cross-dataset generalization
+* External validation
+* More robust medical computer vision systems
+
+---
+
+## Research Feedback
+
+This project is actively being developed and improved.
+
+Feedback regarding the methodology, dataset selection, model architecture, evaluation strategy, explainability, and potential future experiments would be highly valuable.
+
+In particular, areas of interest include:
+
+* Improving the reliability of evaluation on small medical datasets
+* Designing better validation strategies
+* Avoiding data leakage
+* Improving generalization across datasets
+* Comparing different transfer learning approaches
+* Using segmentation information from the BUSI dataset
+* Evaluating explainability methods such as Grad-CAM

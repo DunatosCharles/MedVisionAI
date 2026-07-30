@@ -41,7 +41,7 @@ def load_model():
     model = BreastCancerResNet()
 
     checkpoint = torch.load(
-        "models/checkpoints/resnet18_breastmnist_final_best_f1.pth",
+        "models/checkpoints/resnet18_busi_final.pth",
         map_location="cpu",
         weights_only=True
     )
@@ -96,19 +96,19 @@ st.info(
     """
     📌 **Image Requirements**
 
-    For best results, upload a grayscale breast ultrasound image.
+    For best results, upload a breast ultrasound image.
 
     Recommended:
     - Breast ultrasound images only
     - Grayscale images
     - PNG or JPG format
-    - Similar appearance to BreastMNIST ultrasound images
+    - Similar appearance to the BUSI dataset images
 
-    The model was trained on the BreastMNIST dataset and may not perform reliably on:
+    The model may not perform reliably on:
     - MRI, CT, X-ray, or other medical imaging types
     - Color images
     - Non-breast ultrasound images
-    - Images from different clinical settings
+    - Images from different hospitals or imaging equipment
 
     """
 )
@@ -214,9 +214,9 @@ st.warning(
     It is not a medical diagnostic system and should not be used
     for clinical decisions.
 
-    The model was trained on the BreastMNIST dataset and its
-    predictions may not generalize to all real-world ultrasound
-    images, equipment, populations, or clinical environments.
+    The model was trained on the BUSI (Breast Ultrasound Images) 
+    dataset and its predictions may not generalize to all real-world 
+    ultrasound images, equipment, populations, or clinical environments.
     """
 )
 
@@ -231,7 +231,7 @@ st.sidebar.write(
     """
     **Model:** ResNet18 Transfer Learning
 
-    **Dataset:** BreastMNIST
+    **Dataset:** BUSI Breast Ultrasound Images Dataset
 
     **Task:** Binary Breast Ultrasound Classification
 
@@ -239,8 +239,11 @@ st.sidebar.write(
     - Benign
     - Malignant
 
-    **Test F1 Score:**
-    92.17%
+    **Test Performance:**
+
+    Accuracy: 84.69%
+
+    F1 Score: 71.70%
 
     **Frameworks:**
     - PyTorch
