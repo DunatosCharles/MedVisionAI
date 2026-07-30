@@ -230,9 +230,6 @@ __pycache__/
 # Mac files
 .DS_Store
 
-# Training checkpoints
-models/checkpoints/*.pth
-
 # Keep final model
 !models/checkpoints/resnet18_breastmnist_final_best_f1.pth  
 
