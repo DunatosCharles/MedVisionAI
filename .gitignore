@@ -235,3 +235,8 @@ __pycache__/
 
 datasets/
 *.zip
+# Local virtual environments
+test_env/
+
+# Old experiment checkpoints (kept locally only)
+archive/
