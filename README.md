@@ -486,17 +486,15 @@ This increases the contribution of underrepresented classes during training.
 
 ## Optimizer
 
-The model is trained using Adam.
+The model is trained using AdamW (weight decay 1e-4).
 
-The learning rate is adjusted during training based on validation performance.
+The new classifier head uses a 10x higher learning rate than the pretrained backbone.
 
 ---
 
 ## Learning Rate Scheduling
 
-A `ReduceLROnPlateau` scheduler is used to reduce the learning rate when validation performance stops improving.
-
-The scheduler allows the model to make smaller updates when training approaches a plateau.
+A cosine annealing scheduler gradually lowers the learning rate over the training run.
 
 ---
 
@@ -517,11 +515,9 @@ Save Best Checkpoint
    ↓
 Validation Stops Improving
    ↓
-Reduce Learning Rate
-   ↓
-Continue Training
-   ↓
 Early Stopping
+   ↓
+Evaluate Best Checkpoint on Test Set
 ```
 
 ---
@@ -544,33 +540,36 @@ The F1 score is particularly important because the dataset contains class imbala
 
 The final reported BUSI results should be kept as a separate experimental result from the BreastMNIST results.
 
-At the time of writing, the BUSI model achieved:
+The current BUSI model (retrained October 2026 on a stratified 70 / 15 / 15 split, seed 42) achieved on the held-out test set:
 
 | Metric    |  Score |
 | --------- | -----: |
-| Accuracy  | 88.78% |
-| Precision | 77.78% |
-| Recall    | 80.77% |
-| F1 Score  | 79.25% |
+| Accuracy  | 86.73% |
+| Precision | 72.09% |
+| Recall    | 96.88% |
+| F1 Score  | 82.67% |
+| ROC AUC   |  0.955 |
 
 Confusion Matrix:
 
 ```text
-[[66  6]
- [ 5 21]]
+[[54 12]
+ [ 1 31]]
 ```
 
 Interpretation:
 
 ```text
-66 benign images were correctly classified.
+54 benign images were correctly classified.
 
-21 malignant images were correctly classified.
+31 malignant images were correctly classified.
 
-6 benign images were incorrectly classified as malignant.
+12 benign images were incorrectly classified as malignant.
 
-5 malignant images were incorrectly classified as benign.
+1 malignant image was incorrectly classified as benign.
 ```
+
+Training writes these metrics to `models/checkpoints/resnet18_busi_metrics.json`, which the web app reads for its sidebar.
 
 > These results should be interpreted in the context of the relatively small dataset and the specific train-validation-test split used in this experiment.
 
@@ -825,8 +824,16 @@ source clean_test/bin/activate
 
 ## Install Dependencies
 
+For the web app only:
+
 ```bash
 pip install -r requirements.txt
+```
+
+For training, evaluation and notebooks:
+
+```bash
+pip install -r requirements-train.txt
 ```
 
 ---
@@ -838,6 +845,10 @@ To train the ResNet18 model:
 ```bash
 python -m src.train.train_resnet
 ```
+
+Options include `--epochs`, `--lr`, `--batch-size`, `--patience`, `--seed` and `--full-finetune`.
+
+The best checkpoint (by validation F1) is evaluated on the test set and copied to `models/checkpoints/resnet18_busi_final.pth`, the checkpoint the web app serves.
 
 The training process includes:
 
@@ -877,7 +888,7 @@ Confusion Matrix
 The trained model can be used to classify new ultrasound images.
 
 ```bash
-python -m scripts.predict
+python -m scripts.predict path/to/image.png
 ```
 
 The inference pipeline:

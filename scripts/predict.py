@@ -1,8 +1,10 @@
+import argparse
+
 import torch
 from PIL import Image
-from torchvision import transforms
 
 from src.models.resnet import BreastCancerResNet
+from src.data.transforms import get_eval_transform
 
 
 def get_device():
@@ -21,12 +23,13 @@ def load_model():
 
     device = get_device()
 
-    model = BreastCancerResNet().to(device)
+    model = BreastCancerResNet(pretrained=False).to(device)
 
     model.load_state_dict(
         torch.load(
             "models/checkpoints/resnet18_busi_final.pth",
-            map_location=device
+            map_location=device,
+            weights_only=True
         )
     )
 
@@ -38,19 +41,7 @@ def load_model():
 
 def preprocess_image(image_path):
 
-    transform = transforms.Compose([
-
-        transforms.Resize(
-            (224,224)
-        ),
-
-        transforms.ToTensor(),
-
-        transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
-        )
-    ])
+    transform = get_eval_transform()
 
 
     image = Image.open(
@@ -113,6 +104,10 @@ def predict(image_path):
 
 if __name__ == "__main__":
 
-    predict(
-        "/Users/apple/Documents/MedVisionAI/datasets/busi/Dataset_BUSI_with_GT/benign/benign (1).png"
+    parser = argparse.ArgumentParser(
+        description="Classify a breast ultrasound image"
     )
+
+    parser.add_argument("image_path")
+
+    predict(parser.parse_args().image_path)

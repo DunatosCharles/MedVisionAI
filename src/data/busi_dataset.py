@@ -29,7 +29,8 @@ class BUSIDataset(Dataset):
             )
 
 
-            for filename in os.listdir(class_dir):
+            # Sorted so the seeded split is identical on every machine
+            for filename in sorted(os.listdir(class_dir)):
 
                 # Ignore segmentation masks
                 if "_mask" in filename:

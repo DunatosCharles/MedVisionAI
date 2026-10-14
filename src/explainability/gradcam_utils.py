@@ -23,15 +23,11 @@ def generate_gradcam(
     ]
 
 
-    cam = GradCAM(
-        model=model,
-        target_layers=target_layers
-    )
+    with torch.no_grad():
 
-
-    output = model(
-        image_tensor
-    )
+        output = model(
+            image_tensor
+        )
 
 
     prediction = torch.argmax(
@@ -46,10 +42,17 @@ def generate_gradcam(
     ]
 
 
-    grayscale_cam = cam(
-        input_tensor=image_tensor,
-        targets=targets
-    )[0]
+    # Context manager removes the hooks GradCAM registers on the model,
+    # which is cached and reused across Streamlit reruns
+    with GradCAM(
+        model=model,
+        target_layers=target_layers
+    ) as cam:
+
+        grayscale_cam = cam(
+            input_tensor=image_tensor,
+            targets=targets
+        )[0]
 
 
     img = np.array(
@@ -67,7 +70,7 @@ def generate_gradcam(
         )
 
 
-    img = img / 255.0
+    img = img.astype(np.float32) / 255.0
 
 
     visualization = show_cam_on_image(

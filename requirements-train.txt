@@ -1,0 +1,6 @@
+# Training, evaluation and notebook dependencies
+-r requirements.txt
+medmnist==3.0.2
+scikit-learn==1.9.0
+scikit-image==0.26.0
+matplotlib

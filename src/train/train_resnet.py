@@ -1,10 +1,30 @@
+import argparse
+import json
+import random
+import shutil
+
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import Adam
-from sklearn.metrics import f1_score
+from torch.optim import AdamW
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix
+)
 
 from src.models.resnet import BreastCancerResNet
 from src.data.resnet_dataloader import get_resnet_dataloaders
+
+
+CHECKPOINT_DIR = "models/checkpoints"
+BEST_CHECKPOINT = f"{CHECKPOINT_DIR}/resnet18_busi_best_f1.pth"
+FINAL_CHECKPOINT = f"{CHECKPOINT_DIR}/resnet18_busi_final.pth"
+METRICS_FILE = f"{CHECKPOINT_DIR}/resnet18_busi_metrics.json"
+HISTORY_FILE = "training_history.json"
 
 
 def get_device():
@@ -19,100 +39,136 @@ def get_device():
         return torch.device("cpu")
 
 
-def validate(model, val_loader, criterion, device):
+def set_seed(seed):
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+def evaluate(model, loader, device, criterion=None):
 
     model.eval()
 
     running_loss = 0.0
-    correct = 0
-    total = 0
 
     predictions = []
+    probabilities = []
     true_labels = []
 
     with torch.no_grad():
 
-        for images, labels in val_loader:
+        for images, labels in loader:
 
             images = images.to(device)
             labels = labels.view(-1).long().to(device)
 
             outputs = model(images)
 
-            loss = criterion(outputs, labels)
+            if criterion is not None:
+                running_loss += criterion(outputs, labels).item() * labels.size(0)
 
-            running_loss += loss.item()
-
+            probs = torch.softmax(outputs, dim=1)[:, 1]
             preds = torch.argmax(outputs, dim=1)
 
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
             predictions.extend(preds.cpu().numpy())
+            probabilities.extend(probs.cpu().numpy())
             true_labels.extend(labels.cpu().numpy())
 
-    accuracy = correct / total
+    return {
+        "loss": running_loss / len(true_labels),
+        "accuracy": accuracy_score(true_labels, predictions),
+        "precision": precision_score(true_labels, predictions, zero_division=0),
+        "recall": recall_score(true_labels, predictions, zero_division=0),
+        "f1": f1_score(true_labels, predictions, zero_division=0),
+        "roc_auc": roc_auc_score(true_labels, probabilities),
+        "confusion_matrix": confusion_matrix(true_labels, predictions).tolist()
+    }
 
-    f1 = f1_score(
-        true_labels,
-        predictions
-    )
 
-    return running_loss, accuracy, f1
+def get_class_weights(train_loader):
+
+    # Inverse frequency weights so malignant (minority) errors cost more
+    subset = train_loader.dataset
+    labels = [subset.dataset.labels[i] for i in subset.indices]
+
+    counts = np.bincount(labels, minlength=2)
+    weights = len(labels) / (2 * counts)
+
+    return torch.tensor(weights, dtype=torch.float32)
 
 
-def train():
+def train(args):
+
+    set_seed(args.seed)
 
     device = get_device()
 
     print("Using device:", device)
 
-    train_loader, val_loader, _ = get_resnet_dataloaders(
-        dataset="busi"
+    train_loader, val_loader, test_loader = get_resnet_dataloaders(
+        dataset="busi",
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        seed=args.seed
     )
 
-    model = BreastCancerResNet().to(device)
+    print(
+        f"Train: {len(train_loader.dataset)} | "
+        f"Val: {len(val_loader.dataset)} | "
+        f"Test: {len(test_loader.dataset)}"
+    )
 
-    class_weights = torch.tensor(
-        [1.0, 1.7],
-        dtype=torch.float32
+    model = BreastCancerResNet(
+        pretrained=True,
+        freeze_early_layers=not args.full_finetune
     ).to(device)
 
+    class_weights = get_class_weights(train_loader).to(device)
+
+    print("Class weights:", class_weights.tolist())
+
     criterion = nn.CrossEntropyLoss(
-        weight=class_weights
+        weight=class_weights,
+        label_smoothing=0.05
     )
 
-    optimizer = Adam(
-        filter(
-            lambda p: p.requires_grad,
-            model.parameters()
-        ),
-        lr=3e-5
+    # New classifier head learns faster than the pretrained backbone
+    head_params = list(model.model.fc.parameters())
+    head_ids = {id(p) for p in head_params}
+
+    backbone_params = [
+        p for p in model.parameters()
+        if p.requires_grad and id(p) not in head_ids
+    ]
+
+    optimizer = AdamW(
+        [
+            {"params": backbone_params, "lr": args.lr},
+            {"params": head_params, "lr": args.lr * 10}
+        ],
+        weight_decay=1e-4
     )
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        mode="max",
-        factor=0.5,
-        patience=3
+        T_max=args.epochs
     )
 
-    epochs = 50
-
-    best_val_f1 = 0
-
-    patience = 10
+    best_val_f1 = -1.0
+    best_val_loss = float("inf")
     counter = 0
 
     history = {
         "train_loss": [],
         "train_acc": [],
+        "val_loss": [],
         "val_acc": [],
         "val_f1": [],
         "lr": []
     }
 
-    for epoch in range(epochs):
+    for epoch in range(args.epochs):
 
         model.train()
 
@@ -124,6 +180,7 @@ def train():
 
             images = images.to(device)
             labels = labels.view(-1).long().to(device)
+
             optimizer.zero_grad()
 
             outputs = model(images)
@@ -137,7 +194,7 @@ def train():
 
             optimizer.step()
 
-            running_loss += loss.item()
+            running_loss += loss.item() * labels.size(0)
 
             predictions = torch.argmax(
                 outputs,
@@ -150,42 +207,52 @@ def train():
 
             total += labels.size(0)
 
+        scheduler.step()
+
+        train_loss = running_loss / total
         train_accuracy = correct / total
 
-        val_loss, val_accuracy, val_f1 = validate(
+        val = evaluate(
             model,
             val_loader,
-            criterion,
-            device
+            device,
+            criterion
         )
 
-        scheduler.step(val_f1)
+        lr = optimizer.param_groups[0]["lr"]
 
         print(
-            f"Epoch {epoch+1}/{epochs} | "
-            f"Train Loss: {running_loss:.4f} | "
+            f"Epoch {epoch+1}/{args.epochs} | "
+            f"Train Loss: {train_loss:.4f} | "
             f"Train Acc: {train_accuracy:.4f} | "
-            f"Val Acc: {val_accuracy:.4f} | "
-            f"Val F1: {val_f1:.4f} | "
-            f"LR: {optimizer.param_groups[0]['lr']}"
+            f"Val Loss: {val['loss']:.4f} | "
+            f"Val Acc: {val['accuracy']:.4f} | "
+            f"Val F1: {val['f1']:.4f} | "
+            f"LR: {lr:.2e}"
         )
 
-        history["train_loss"].append(running_loss)
+        history["train_loss"].append(train_loss)
         history["train_acc"].append(train_accuracy)
-        history["val_acc"].append(val_accuracy)
-        history["val_f1"].append(val_f1)
-        history["lr"].append(
-            optimizer.param_groups[0]["lr"]
+        history["val_loss"].append(val["loss"])
+        history["val_acc"].append(val["accuracy"])
+        history["val_f1"].append(val["f1"])
+        history["lr"].append(lr)
+
+        # Best by validation F1, ties broken by lower validation loss
+        improved = (
+            val["f1"] > best_val_f1
+            or (val["f1"] == best_val_f1 and val["loss"] < best_val_loss)
         )
 
-        if val_f1 > best_val_f1:
+        if improved:
 
-            best_val_f1 = val_f1
+            best_val_f1 = val["f1"]
+            best_val_loss = val["loss"]
             counter = 0
 
             torch.save(
                 model.state_dict(),
-                "models/checkpoints/resnet18_busi_best_f1.pth"
+                BEST_CHECKPOINT
             )
 
             print("Saved best model!")
@@ -194,33 +261,71 @@ def train():
 
             counter += 1
 
-        if counter >= patience:
+        if counter >= args.patience:
 
             print("Early stopping!")
             break
 
-    print(
-        f"Best validation F1: {best_val_f1:.4f}"
+    print(f"Best validation F1: {best_val_f1:.4f}")
+
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=4)
+
+    print("Training history saved!")
+
+
+    # Final evaluation of the best checkpoint on the held-out test set
+    model.load_state_dict(
+        torch.load(BEST_CHECKPOINT, map_location=device, weights_only=True)
     )
 
-    print("Best F1 checkpoint saved:")
-    print(best_val_f1)
+    test = evaluate(model, test_loader, device)
 
-    import json
+    print("\nTest Results")
 
-    with open(
-        "training_history.json",
-        "w"
-    ) as f:
+    for name in ["accuracy", "precision", "recall", "f1", "roc_auc"]:
+        print(f"{name}: {test[name]:.4f}")
+
+    print("Confusion Matrix:", test["confusion_matrix"])
+
+    with open(METRICS_FILE, "w") as f:
         json.dump(
-            history,
+            {
+                "best_val_f1": best_val_f1,
+                "test": test,
+                "args": vars(args)
+            },
             f,
             indent=4
         )
 
-    print("Training history saved!")
+    # The web app serves this checkpoint
+    shutil.copyfile(BEST_CHECKPOINT, FINAL_CHECKPOINT)
+
+    print(f"Copied best model to {FINAL_CHECKPOINT}")
+
+
+def parse_args():
+
+    parser = argparse.ArgumentParser(
+        description="Train ResNet18 on the BUSI dataset"
+    )
+
+    parser.add_argument("--epochs", type=int, default=40)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--patience", type=int, default=12)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument(
+        "--full-finetune",
+        action="store_true",
+        help="Also train the stem and layer1"
+    )
+
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
 
-    train()
-
+    train(parse_args())

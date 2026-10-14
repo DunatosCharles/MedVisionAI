@@ -1,56 +1,52 @@
-import torch
-from torch.utils.data import DataLoader, random_split
-from torchvision import transforms
-from medmnist import BreastMNIST
+from torch.utils.data import DataLoader, Subset
+from sklearn.model_selection import train_test_split
 
 from src.data.busi_dataset import BUSIDataset
+from src.data.transforms import get_train_transform, get_eval_transform
+
+
+BUSI_ROOT = "datasets/busi/Dataset_BUSI_with_GT"
+
+
+def get_busi_split_indices(labels, seed=42):
+
+    indices = list(range(len(labels)))
+
+    # 70 / 15 / 15 split, stratified so every split keeps the
+    # benign / malignant ratio
+    train_indices, holdout_indices = train_test_split(
+        indices,
+        test_size=0.3,
+        stratify=labels,
+        random_state=seed
+    )
+
+    holdout_labels = [labels[i] for i in holdout_indices]
+
+    val_indices, test_indices = train_test_split(
+        holdout_indices,
+        test_size=0.5,
+        stratify=holdout_labels,
+        random_state=seed
+    )
+
+    return train_indices, val_indices, test_indices
 
 
 def get_resnet_dataloaders(
-    dataset="breastmnist",
-    batch_size=32
+    dataset="busi",
+    batch_size=32,
+    num_workers=0,
+    seed=42
 ):
 
-    train_transform = transforms.Compose([
-
-        transforms.Resize(
-            (224,224)
-        ),
-
-        transforms.RandomRotation(
-            degrees=5
-        ),
-
-        transforms.RandomAffine(
-            degrees=0,
-            translate=(0.05,0.05)
-        ),
-
-        transforms.ToTensor(),
-
-        transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
-        )
-    ])
-
-
-    test_transform = transforms.Compose([
-
-        transforms.Resize(
-            (224,224)
-        ),
-
-        transforms.ToTensor(),
-
-        transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
-        )
-    ])
+    train_transform = get_train_transform()
+    test_transform = get_eval_transform()
 
 
     if dataset.lower() == "breastmnist":
+
+        from medmnist import BreastMNIST
 
         train_dataset = BreastMNIST(
             split="train",
@@ -75,57 +71,36 @@ def get_resnet_dataloaders(
 
     elif dataset.lower() == "busi":
 
-        full_dataset = BUSIDataset(
-            root_dir="datasets/busi/Dataset_BUSI_with_GT",
-            transform=None
-        )
-
-
-        train_size = int(0.7 * len(full_dataset))
-        val_size = int(0.15 * len(full_dataset))
-        test_size = len(full_dataset) - train_size - val_size
-
-
-        train_indices, val_indices, test_indices = torch.utils.data.random_split(
-            range(len(full_dataset)),
-            [
-                train_size,
-                val_size,
-                test_size
-            ],
-            generator=torch.Generator().manual_seed(42)
-        )
-
-
         train_dataset = BUSIDataset(
-            root_dir="datasets/busi/Dataset_BUSI_with_GT",
+            root_dir=BUSI_ROOT,
             transform=train_transform
         )
 
-        val_dataset = BUSIDataset(
-            root_dir="datasets/busi/Dataset_BUSI_with_GT",
-            transform=test_transform
-        )
-
-        test_dataset = BUSIDataset(
-            root_dir="datasets/busi/Dataset_BUSI_with_GT",
+        eval_dataset = BUSIDataset(
+            root_dir=BUSI_ROOT,
             transform=test_transform
         )
 
 
-        train_dataset = torch.utils.data.Subset(
+        train_indices, val_indices, test_indices = get_busi_split_indices(
+            train_dataset.labels,
+            seed=seed
+        )
+
+
+        train_dataset = Subset(
             train_dataset,
-            train_indices.indices
+            train_indices
         )
 
-        val_dataset = torch.utils.data.Subset(
-            val_dataset,
-            val_indices.indices
+        val_dataset = Subset(
+            eval_dataset,
+            val_indices
         )
 
-        test_dataset = torch.utils.data.Subset(
-            test_dataset,
-            test_indices.indices
+        test_dataset = Subset(
+            eval_dataset,
+            test_indices
         )
 
 
@@ -139,21 +114,24 @@ def get_resnet_dataloaders(
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True
+        shuffle=True,
+        num_workers=num_workers
     )
 
 
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
-        shuffle=False
+        shuffle=False,
+        num_workers=num_workers
     )
 
 
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
-        shuffle=False
+        shuffle=False,
+        num_workers=num_workers
     )
 
 

@@ -4,12 +4,14 @@ from torchvision.models import resnet18, ResNet18_Weights
 
 class BreastCancerResNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, pretrained=True, freeze_early_layers=True):
 
         super().__init__()
 
+        # ImageNet weights are only needed when training; inference
+        # loads a checkpoint, so skip the download there
         self.model = resnet18(
-            weights=ResNet18_Weights.DEFAULT
+            weights=ResNet18_Weights.DEFAULT if pretrained else None
         )
 
         # Preserve pretrained knowledge by averaging RGB filters
@@ -32,20 +34,17 @@ class BreastCancerResNet(nn.Module):
 
         self.model.conv1 = new_conv
 
-        # Freeze pretrained layers
-        for param in self.model.parameters():
-            param.requires_grad = False
+        # Freeze the stem and layer1, fine tune deeper layers
+        if freeze_early_layers:
 
-      # Fine tune deeper layers
+            for param in self.model.conv1.parameters():
+                param.requires_grad = False
 
-        for param in self.model.layer2.parameters():
-            param.requires_grad = True
+            for param in self.model.bn1.parameters():
+                param.requires_grad = False
 
-        for param in self.model.layer3.parameters():
-            param.requires_grad = True
-
-        for param in self.model.layer4.parameters():
-            param.requires_grad = True
+            for param in self.model.layer1.parameters():
+                param.requires_grad = False
 
 
         # Replace classifier

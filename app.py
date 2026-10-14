@@ -1,3 +1,4 @@
+import json
 import os
 
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
@@ -8,9 +9,13 @@ torch.set_num_threads(1)
 
 import streamlit as st
 from PIL import Image
-from torchvision import transforms
 
 from src.models.resnet import BreastCancerResNet
+from src.data.transforms import get_eval_transform
+
+
+MODEL_PATH = "models/checkpoints/resnet18_busi_final.pth"
+METRICS_PATH = "models/checkpoints/resnet18_busi_metrics.json"
 
 
 # -----------------------
@@ -38,10 +43,10 @@ device = torch.device("cpu")
 @st.cache_resource(show_spinner=False)
 def load_model():
 
-    model = BreastCancerResNet()
+    model = BreastCancerResNet(pretrained=False)
 
     checkpoint = torch.load(
-        "models/checkpoints/resnet18_busi_final.pth",
+        MODEL_PATH,
         map_location="cpu",
         weights_only=True
     )
@@ -61,18 +66,18 @@ with st.spinner("Loading MedVisionAI model..."):
 # Image Transform
 # -----------------------
 
-transform = transforms.Compose(
-    [
-        transforms.Resize((224,224)),
+transform = get_eval_transform()
 
-        transforms.ToTensor(),
 
-        transforms.Normalize(
-            mean=[0.4829],
-            std=[0.229]
-        )
-    ]
-)
+@st.cache_data(show_spinner=False)
+def load_metrics():
+
+    try:
+        with open(METRICS_PATH) as f:
+            return json.load(f)["test"]
+
+    except (OSError, KeyError, ValueError):
+        return None
 
 
 # -----------------------
@@ -239,15 +244,22 @@ st.sidebar.write(
     - Benign
     - Malignant
 
-    **Test Performance:**
-
-    Accuracy: 84.69%
-
-    F1 Score: 71.70%
-
     **Frameworks:**
     - PyTorch
     - Streamlit
     - Grad-CAM
     """
 )
+
+
+metrics = load_metrics()
+
+if metrics:
+
+    st.sidebar.write("**Test Performance:**")
+
+    st.sidebar.write(
+        f"Accuracy: {metrics['accuracy'] * 100:.2f}%  \n"
+        f"F1 Score: {metrics['f1'] * 100:.2f}%  \n"
+        f"ROC AUC: {metrics['roc_auc']:.3f}"
+    )

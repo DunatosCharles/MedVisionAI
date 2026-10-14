@@ -20,9 +20,17 @@ plt.plot(
     label="Training Loss"
 )
 
+if "val_loss" in history:
+
+    plt.plot(
+        epochs,
+        history["val_loss"],
+        label="Validation Loss"
+    )
+
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Training Loss Curve")
+plt.title("Loss Curve")
 plt.legend()
 
 plt.savefig(
