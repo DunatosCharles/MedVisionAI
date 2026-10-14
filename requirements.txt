@@ -3,6 +3,8 @@
 # of CUDA libraries, which the free Streamlit tier cannot handle.
 --extra-index-url https://download.pytorch.org/whl/cpu
 streamlit==1.59.1
+# Starlette 1.8.0 breaks Streamlit's media server (images fail with HTTP 500)
+starlette==1.7.0
 torch==2.12.1
 torchvision==0.27.1
 grad-cam==1.5.5
