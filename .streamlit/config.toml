@@ -1,0 +1,41 @@
+[server]
+maxUploadSize = 10
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "0.75rem"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.light]
+primaryColor = "#0F766E"
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#EEF3F6"
+textColor = "#0F172A"
+borderColor = "#DCE4EA"
+linkColor = "#0F766E"
+greenColor = "#15803D"
+redColor = "#B91C1C"
+
+[theme.light.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
+
+[theme.dark]
+primaryColor = "#2DD4BF"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#152033"
+textColor = "#E2E8F0"
+borderColor = "#24324A"
+linkColor = "#5EEAD4"
+greenColor = "#4ADE80"
+redColor = "#F87171"
+
+[theme.dark.sidebar]
+backgroundColor = "#0F1829"
+secondaryBackgroundColor = "#18243A"
