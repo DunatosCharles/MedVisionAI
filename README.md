@@ -621,6 +621,33 @@ Training writes these metrics to `models/checkpoints/resnet18_busi_metrics.json`
 
 ---
 
+# BUSI Cross-Validation Results
+
+A single ~90-image test set is noisy, so the model was also evaluated with lesion-grouped 5-fold cross-validation (`python -m scripts.cross_validate`). Five models were trained, and each of the 633 usable images was tested exactly once.
+
+| Metric      | Mean ± SD (5 folds) | Pooled (633 images) | 95% CI (bootstrap) |
+| ----------- | :-----------------: | :-----------------: | :----------------: |
+| Accuracy    |   84.0% ± 7.3%      |        84.0%        |   81.2% – 87.0%    |
+| Precision   |   75.4% ± 11.3%     |        74.6%        |   69.0% – 80.5%    |
+| Recall      |   76.5% ± 9.8%      |        76.5%        |   70.6% – 82.0%    |
+| Specificity |   87.6% ± 6.9%      |        87.6%        |   84.6% – 90.7%    |
+| F1 Score    |   75.8% ± 9.9%      |        75.5%        |   70.9% – 80.0%    |
+| ROC AUC     |   0.896 ± 0.084     |        0.912        |   0.889 – 0.934    |
+
+Per fold:
+
+| Fold | Accuracy | Recall | Specificity |   F1  | ROC AUC |
+| :--: | :------: | :----: | :---------: | :---: | :-----: |
+|  1   |   87.4%  |  85.4% |    88.4%    | 81.4% |  0.943  |
+|  2   |   85.0%  |  70.7% |    91.9%    | 75.3% |  0.926  |
+|  3   |   88.2%  |  78.0% |    93.0%    | 81.0% |  0.908  |
+|  4   |   69.8%  |  61.0% |    74.1%    | 56.8% |  0.733  |
+|  5   |   89.7%  |  87.5% |    90.7%    | 84.3% |  0.971  |
+
+> Fold 4 is a model-selection failure, not a harder fold. Its epoch-1 model happened to score the best validation F1 on only 85 validation images, so early stopping kept an almost untrained model. Without fold 4, accuracy is 86–90% and ROC AUC 0.91–0.97. Selecting checkpoints by validation loss or ROC AUC, with a minimum number of epochs, would make training more robust.
+
+---
+
 # BreastMNIST Version 1 Results
 
 The original BreastMNIST experiment achieved:
