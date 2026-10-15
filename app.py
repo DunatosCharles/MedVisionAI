@@ -12,6 +12,7 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
+from src.evaluate.calibration import apply_temperature, load_temperature
 
 
 MODEL_PATH = "models/checkpoints/resnet18_busi_final.pth"
@@ -60,6 +61,17 @@ def load_model():
 
 with st.spinner("Loading MedVisionAI model..."):
     model = load_model()
+
+
+# Temperature fitted on the validation set by scripts/evaluate_busi.py,
+# so the displayed confidence is calibrated (T = 1 if missing)
+@st.cache_data(show_spinner=False)
+def get_temperature():
+
+    return load_temperature(METRICS_PATH)
+
+
+temperature = get_temperature()
 
 
 # -----------------------
@@ -143,9 +155,9 @@ if uploaded_file:
 
         outputs = model(input_tensor)
 
-        probabilities = torch.softmax(
+        probabilities = apply_temperature(
             outputs,
-            dim=1
+            temperature
         )
 
         confidence, prediction = torch.max(
@@ -178,6 +190,7 @@ if uploaded_file:
 
     st.info(
         f"Confidence: {confidence:.2f}%"
+        + (" (calibrated)" if temperature != 1.0 else "")
     )
 
 

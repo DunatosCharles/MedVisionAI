@@ -150,18 +150,30 @@ The dataset contains both ultrasound images and segmentation masks. Segmentation
 
 # Dataset Splitting
 
-The BUSI dataset was divided into:
+BUSI contains many near-duplicate images: several ultrasound frames of the same lesion, sometimes with different caliper marks or annotations. A plain random split puts near-copies of training images into the test set, which inflates test scores.
+
+`scripts/find_duplicates.py` groups images by lesion using a perceptual hash (difference hash, 16×16, Hamming distance ≤ 55, checked visually) and writes `data/busi_groups.json`:
 
 ```text
-70% Training
-15% Validation
-15% Testing
+647 images → 509 lesion groups
+115 groups contain near-duplicates (253 images)
+14 images appear under both benign and malignant
 ```
 
-A fixed random seed was used to make the split reproducible:
+The 14 conflicting images have an unknown true label and are excluded from training and evaluation.
 
-```python
-torch.Generator().manual_seed(42)
+The remaining 633 images are divided with `StratifiedGroupKFold` (seed 42), so every image of a lesion lands in the same split and each split keeps the benign / malignant ratio:
+
+```text
+~70% Training    (451 images)
+~15% Validation  (91 images)
+~15% Testing     (91 images)
+```
+
+To regenerate the groups:
+
+```bash
+python -m scripts.find_duplicates
 ```
 
 The training set uses data augmentation, while the validation and test sets use deterministic preprocessing.
@@ -528,9 +540,12 @@ The model is evaluated using:
 
 * Accuracy
 * Precision
-* Recall
+* Recall (sensitivity) and specificity
 * F1 Score
+* ROC AUC and PR AUC
+* Calibration (Brier score, Expected Calibration Error, reliability diagram)
 * Confusion Matrix
+* 95% bootstrap confidence intervals for every metric
 
 The F1 score is particularly important because the dataset contains class imbalance and because both precision and recall are important for the classification task.
 
@@ -540,21 +555,52 @@ The F1 score is particularly important because the dataset contains class imbala
 
 The final reported BUSI results should be kept as a separate experimental result from the BreastMNIST results.
 
-The current BUSI model (retrained October 2026 on a stratified 70 / 15 / 15 split, seed 42) achieved on the held-out test set:
+The current BUSI model (retrained October 2026 on a lesion-grouped 70 / 15 / 15 split, seed 42; see Dataset Splitting) achieved the following on the held-out test set of 91 images (62 benign, 29 malignant):
 
-| Metric    |  Score |
-| --------- | -----: |
-| Accuracy  | 86.73% |
-| Precision | 72.09% |
-| Recall    | 96.88% |
-| F1 Score  | 82.67% |
-| ROC AUC   |  0.955 |
+| Metric                       |  Score | 95% CI (bootstrap) |
+| ---------------------------- | -----: | :----------------: |
+| Accuracy                     | 83.52% |   75.8% – 90.1%    |
+| Precision (PPV)              | 73.33% |   56.5% – 88.0%    |
+| Recall (Sensitivity)         | 75.86% |   58.8% – 90.9%    |
+| Specificity                  | 87.10% |   77.9% – 94.6%    |
+| F1 Score                     | 74.58% |   60.0% – 85.3%    |
+| ROC AUC                      |  0.889 |   0.801 – 0.956    |
+| PR AUC (Average Precision)   |  0.865 |   0.756 – 0.944    |
+| Brier Score ↓                |  0.124 |   0.086 – 0.167    |
+| Expected Calibration Error ↓ |  0.095 |   0.081 – 0.192    |
+
+Confidence intervals come from 2,000 bootstrap resamples of the test set. Their width shows how much a ~90-image test set limits the precision of any single number. For example, the true accuracy could plausibly be anywhere from about 76% to 90%.
+
+### Effect of the leak-free split
+
+The previous model was trained on a plain stratified split. It scored 86.7% accuracy, 96.9% recall and 0.955 ROC AUC, partly because near-duplicate frames of the same lesion appeared in both training and test. With the lesions grouped, ROC AUC drops to 0.889 and recall to 75.9%. The lower numbers are a more honest estimate of how the model handles lesions it has never seen.
+
+![ROC and Precision-Recall Curves](results/busi/roc_pr_curves.png)
+
+<p>
+  <img src="results/busi/confusion_matrix.png" width="45%" alt="Confusion Matrix">
+  <img src="results/busi/calibration.png" width="45%" alt="Reliability Diagram">
+</p>
+
+### Calibration
+
+`scripts/evaluate_busi.py` applies **temperature scaling** (Guo et al., 2017). It divides the model's logits by a single scalar T, fitted on the validation split by minimising negative log-likelihood. The test set is never used for fitting. T is saved under `"calibration"` in `models/checkpoints/resnet18_busi_metrics.json`, and the web app divides by the same T before showing a confidence score. Because one T rescales both logits equally, the predicted class never changes. Accuracy, recall and ROC AUC are therefore identical before and after.
+
+| Test set (91 images)         | Uncalibrated | Temperature scaled (T = 1.04) |
+| ---------------------------- | -----------: | ----------------------------: |
+| Brier Score ↓                |        0.124 |                         0.124 |
+| Expected Calibration Error ↓ |        0.095 |                         0.106 |
+| Negative log-likelihood ↓    |        0.375 |                         0.375 |
+
+**Temperature scaling did not help this model.** The fitted temperature is essentially 1, which means the retrained model's overall confidence level is already about right on the validation set. The calibration error that remains is not uniform over- or under-confidence, so a single scalar cannot remove it. The reliability diagram shows the problem is concentrated in the 0.5–0.7 range: there, the model says "60% malignant" for lesions that turn out malignant only about 20% of the time. Elsewhere, the curve is close to the diagonal. The small change in ECE (0.095 → 0.106) is well inside the bootstrap interval, and ECE with 10 bins on 91 images is itself noisy.
+
+In practice, treat mid-range confidence scores in the web app (roughly 50–70%) as "uncertain" rather than as probabilities. Calibrators that can move the decision boundary, such as Platt scaling (a temperature plus a bias), were not adopted. With only 91 validation images, extra parameters risk fitting noise.
 
 Confusion Matrix:
 
 ```text
-[[54 12]
- [ 1 31]]
+[[54  8]
+ [ 7 22]]
 ```
 
 Interpretation:
@@ -562,11 +608,11 @@ Interpretation:
 ```text
 54 benign images were correctly classified.
 
-31 malignant images were correctly classified.
+22 malignant images were correctly classified.
 
-12 benign images were incorrectly classified as malignant.
+8 benign images were incorrectly classified as malignant.
 
-1 malignant image was incorrectly classified as benign.
+7 malignant images were incorrectly classified as benign.
 ```
 
 Training writes these metrics to `models/checkpoints/resnet18_busi_metrics.json`, which the web app reads for its sidebar.
@@ -850,6 +896,14 @@ Options include `--epochs`, `--lr`, `--batch-size`, `--patience`, `--seed` and `
 
 The best checkpoint (by validation F1) is evaluated on the test set and copied to `models/checkpoints/resnet18_busi_final.pth`, the checkpoint the web app serves.
 
+To run lesion-grouped 5-fold cross-validation (trains five models, about 45 minutes on an Apple Silicon GPU):
+
+```bash
+python -m scripts.cross_validate
+```
+
+Results are written to `results/busi_cv/cv_metrics.json`. Fold checkpoints go to `models/checkpoints/cv/` and do not replace the web app's model.
+
 The training process includes:
 
 * Dataset loading
@@ -874,12 +928,23 @@ python -m scripts.evaluate_busi
 The evaluation script calculates:
 
 ```text
-Accuracy
-Precision
-Recall
-F1 Score
+Accuracy, Precision, Recall, Specificity, F1 Score
+ROC AUC and PR AUC
+Brier Score and Expected Calibration Error
+95% bootstrap confidence intervals for every metric
 Confusion Matrix
 ```
+
+It writes the following to `results/busi/`:
+
+* `test_metrics.json`
+* `roc_pr_curves.png`
+* `confusion_matrix.png`
+* `calibration.png` (reliability curves before and after temperature scaling)
+
+It also fits the calibration temperature on the validation split and saves it to `models/checkpoints/resnet18_busi_metrics.json`, where the web app reads it. Retraining rewrites that file, so re-run this script after every training run.
+
+Use `--checkpoint` to evaluate a different model, or `--bootstrap` to change the number of resamples.
 
 ---
 
@@ -956,16 +1021,9 @@ This increases the risk of:
 
 ## Dataset Splitting
 
-The reported BUSI results are based on a single randomized train-validation-test split.
+A single ~90-image test set gives noisy estimates. Lesion-grouped 5-fold cross-validation (`python -m scripts.cross_validate`) trains five models so every usable image is tested exactly once, and reports mean ± standard deviation across folds plus bootstrap confidence intervals.
 
-Therefore, the results may change with a different split.
-
-Future experiments should investigate:
-
-* Stratified splitting
-* K-fold cross-validation
-* Multiple random seeds
-* Confidence intervals
+Near-duplicate grouping relies on image similarity, not patient identifiers, which BUSI does not provide. Different lesions from the same patient may still appear in different splits.
 
 ---
 
@@ -998,9 +1056,7 @@ It should not be used to:
 
 ## 1. Cross-Validation
 
-Because the dataset is relatively small, K-fold cross-validation would provide a more reliable estimate of model performance.
-
-Potential experiments include:
+Lesion-grouped 5-fold cross-validation is implemented in `scripts/cross_validate.py`:
 
 ```text
 Dataset
@@ -1018,9 +1074,7 @@ Calculate Mean ± Standard Deviation
 
 ## 2. Patient-Level Data Splitting
 
-If patient identifiers are available, future experiments should ensure that images from the same patient do not appear across multiple dataset splits.
-
-This would help reduce potential data leakage.
+Splits are now grouped by lesion using image similarity. If patient identifiers become available, grouping by patient would remove the remaining risk of leakage between different lesions of the same patient.
 
 ---
 
@@ -1096,7 +1150,7 @@ This would provide a better estimate of generalization to unseen data distributi
 
 ## 8. Model Calibration
 
-Future work could evaluate whether the model's confidence scores are reliable.
+Calibration is now measured, and temperature scaling is fitted and applied (see the Calibration section above). For the current model, temperature scaling has almost no effect (T = 1.04). The remaining error is the over-prediction of malignant for mid-range scores. Methods that can bend the calibration curve, such as Platt scaling, isotonic regression or recalibration with class-prior correction, may help, but need more held-out data than a single split provides.
 
 A model predicting:
 

@@ -240,3 +240,6 @@ test_env/
 
 # Old experiment checkpoints (kept locally only)
 archive/
+
+# Cross-validation fold checkpoints (5 x 45 MB, reproducible)
+models/checkpoints/cv/

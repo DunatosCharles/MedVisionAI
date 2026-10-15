@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import random
 import shutil
 
@@ -76,6 +77,8 @@ def evaluate(model, loader, device, criterion=None):
             true_labels.extend(labels.cpu().numpy())
 
     return {
+        "labels": [int(x) for x in true_labels],
+        "probabilities": [float(x) for x in probabilities],
         "loss": running_loss / len(true_labels),
         "accuracy": accuracy_score(true_labels, predictions),
         "precision": precision_score(true_labels, predictions, zero_division=0),
@@ -102,6 +105,17 @@ def train(args):
 
     set_seed(args.seed)
 
+    # Cross-validation folds keep their own checkpoints and leave the
+    # app's model, metrics and training history untouched
+    cv_run = args.fold is not None
+
+    best_checkpoint = (
+        f"{CHECKPOINT_DIR}/cv/resnet18_busi_fold{args.fold}.pth"
+        if cv_run else BEST_CHECKPOINT
+    )
+
+    os.makedirs(os.path.dirname(best_checkpoint), exist_ok=True)
+
     device = get_device()
 
     print("Using device:", device)
@@ -110,7 +124,9 @@ def train(args):
         dataset="busi",
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        seed=args.seed
+        seed=args.seed,
+        fold=args.fold,
+        n_folds=args.n_folds
     )
 
     print(
@@ -252,7 +268,7 @@ def train(args):
 
             torch.save(
                 model.state_dict(),
-                BEST_CHECKPOINT
+                best_checkpoint
             )
 
             print("Saved best model!")
@@ -268,18 +284,23 @@ def train(args):
 
     print(f"Best validation F1: {best_val_f1:.4f}")
 
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history, f, indent=4)
+    if not cv_run:
 
-    print("Training history saved!")
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(history, f, indent=4)
+
+        print("Training history saved!")
 
 
     # Final evaluation of the best checkpoint on the held-out test set
     model.load_state_dict(
-        torch.load(BEST_CHECKPOINT, map_location=device, weights_only=True)
+        torch.load(best_checkpoint, map_location=device, weights_only=True)
     )
 
     test = evaluate(model, test_loader, device)
+
+    if cv_run:
+        return test
 
     print("\nTest Results")
 
@@ -304,6 +325,8 @@ def train(args):
 
     print(f"Copied best model to {FINAL_CHECKPOINT}")
 
+    return test
+
 
 def parse_args():
 
@@ -317,6 +340,13 @@ def parse_args():
     parser.add_argument("--patience", type=int, default=12)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument(
+        "--fold",
+        type=int,
+        default=None,
+        help="Train one cross-validation fold instead of the hold-out split"
+    )
+    parser.add_argument("--n-folds", type=int, default=5)
     parser.add_argument(
         "--full-finetune",
         action="store_true",
