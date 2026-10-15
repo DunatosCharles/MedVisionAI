@@ -555,19 +555,21 @@ The F1 score is particularly important because the dataset contains class imbala
 
 The final reported BUSI results should be kept as a separate experimental result from the BreastMNIST results.
 
-The current BUSI model (retrained October 2026 on a lesion-grouped 70 / 15 / 15 split, seed 42; see Dataset Splitting) achieved the following on the held-out test set of 91 images (62 benign, 29 malignant):
+The current BUSI model (retrained October 2026 on a lesion-grouped 70 / 15 / 15 split, seed 42; see Dataset Splitting) achieved the following on the held-out test set of 91 images (62 benign, 29 malignant). The model is evaluated at a 0.5 threshold, both on its raw outputs and after **Platt scaling**, which the web app uses (see Calibration below):
 
-| Metric                       |  Score | 95% CI (bootstrap) |
-| ---------------------------- | -----: | :----------------: |
-| Accuracy                     | 83.52% |   75.8% – 90.1%    |
-| Precision (PPV)              | 73.33% |   56.5% – 88.0%    |
-| Recall (Sensitivity)         | 75.86% |   58.8% – 90.9%    |
-| Specificity                  | 87.10% |   77.9% – 94.6%    |
-| F1 Score                     | 74.58% |   60.0% – 85.3%    |
-| ROC AUC                      |  0.889 |   0.801 – 0.956    |
-| PR AUC (Average Precision)   |  0.865 |   0.756 – 0.944    |
-| Brier Score ↓                |  0.124 |   0.086 – 0.167    |
-| Expected Calibration Error ↓ |  0.095 |   0.081 – 0.192    |
+| Metric                       | Raw model | 95% CI (bootstrap) | Platt calibrated (deployed) | 95% CI (bootstrap) |
+| ---------------------------- | --------: | :----------------: | --------------------------: | :----------------: |
+| Accuracy                     |    83.52% |   75.8% – 90.1%    |                      87.91% |   80.2% – 93.4%    |
+| Precision (PPV)              |    73.33% |   56.5% – 88.0%    |                      90.91% |   76.5% – 100%     |
+| Recall (Sensitivity)         |    75.86% |   58.8% – 90.9%    |                  **68.97%** |   50.0% – 84.6%    |
+| Specificity                  |    87.10% |   77.9% – 94.6%    |                      96.77% |   91.7% – 100%     |
+| F1 Score                     |    74.58% |   60.0% – 85.3%    |                      78.43% |   63.8% – 88.9%    |
+| ROC AUC                      |     0.889 |   0.801 – 0.956    |                       0.889 |   0.801 – 0.956    |
+| PR AUC (Average Precision)   |     0.865 |   0.756 – 0.944    |                       0.865 |   0.756 – 0.944    |
+| Brier Score ↓                |     0.124 |   0.086 – 0.167    |                       0.103 |   0.058 – 0.158    |
+| Expected Calibration Error ↓ |     0.095 |   0.081 – 0.192    |                       0.095 |   0.067 – 0.175    |
+
+ROC AUC and PR AUC do not depend on a threshold, so calibration leaves them unchanged. The other metrics move because Platt scaling shifts where the 0.5 cut-off falls (explained below).
 
 Confidence intervals come from 2,000 bootstrap resamples of the test set. Their width shows how much a ~90-image test set limits the precision of any single number. For example, the true accuracy could plausibly be anywhere from about 76% to 90%.
 
@@ -584,38 +586,47 @@ The previous model was trained on a plain stratified split. It scored 86.7% accu
 
 ### Calibration
 
-`scripts/evaluate_busi.py` applies **temperature scaling** (Guo et al., 2017). It divides the model's logits by a single scalar T, fitted on the validation split by minimising negative log-likelihood. The test set is never used for fitting. T is saved under `"calibration"` in `models/checkpoints/resnet18_busi_metrics.json`, and the web app divides by the same T before showing a confidence score. Because one T rescales both logits equally, the predicted class never changes. Accuracy, recall and ROC AUC are therefore identical before and after.
+`scripts/evaluate_busi.py` fits two calibrators on the validation split (91 images) by minimising negative log-likelihood. The test set is never used for fitting. Both map the logit margin *m* (malignant minus benign) to a probability:
 
-| Test set (91 images)         | Uncalibrated | Temperature scaled (T = 1.04) |
-| ---------------------------- | -----------: | ----------------------------: |
-| Brier Score ↓                |        0.124 |                         0.124 |
-| Expected Calibration Error ↓ |        0.095 |                         0.106 |
-| Negative log-likelihood ↓    |        0.375 |                         0.375 |
+* **Temperature scaling** (Guo et al., 2017): P(malignant) = sigmoid(*m* / T). One parameter. It changes confidence but never the predicted class.
+* **Platt scaling**: P(malignant) = sigmoid(a·*m* + b). A temperature plus a bias. The bias can move the decision boundary, so predictions can change.
 
-**Temperature scaling did not help this model.** The fitted temperature is essentially 1, which means the retrained model's overall confidence level is already about right on the validation set. The calibration error that remains is not uniform over- or under-confidence, so a single scalar cannot remove it. The reliability diagram shows the problem is concentrated in the 0.5–0.7 range: there, the model says "60% malignant" for lesions that turn out malignant only about 20% of the time. Elsewhere, the curve is close to the diagonal. The small change in ECE (0.095 → 0.106) is well inside the bootstrap interval, and ECE with 10 bins on 91 images is itself noisy.
+| Test set (91 images)         | Uncalibrated | Temperature (T = 1.04) | Platt (a = 1.07, b = −1.49) |
+| ---------------------------- | -----------: | ---------------------: | --------------------------: |
+| Negative log-likelihood ↓    |        0.375 |                  0.375 |                       0.367 |
+| Brier Score ↓                |        0.124 |                  0.124 |                       0.103 |
+| Expected Calibration Error ↓ |        0.095 |                  0.106 |                       0.095 |
+| Recall at 0.5                |        75.9% |                  75.9% |                       69.0% |
+| Specificity at 0.5           |        87.1% |                  87.1% |                       96.8% |
 
-In practice, treat mid-range confidence scores in the web app (roughly 50–70%) as "uncertain" rather than as probabilities. Calibrators that can move the decision boundary, such as Platt scaling (a temperature plus a bias), were not adopted. With only 91 validation images, extra parameters risk fitting noise.
+**Temperature scaling did not help.** The fitted T is essentially 1, so the model's overall confidence level was already about right. What was wrong is a **shift toward malignant**, an expected side effect of the class-weighted training loss. A single temperature cannot correct a shift.
 
-Confusion Matrix:
+**Platt scaling was adopted** because it improved the proper scoring rules on validation. Each method was refitted on 4/5 of the validation set and scored on the remaining 1/5, repeated 20 times. Out-of-fold, NLL fell from 0.30 to 0.24 and Brier from 0.092 to 0.080. Temperature scaling gave no improvement. On the untouched test set, Platt scaling lowered Brier from 0.124 to 0.103. **It did not lower ECE**: 0.095 on test, and on validation out-of-fold 0.076 versus 0.070 uncalibrated. ECE with 10 bins on ~90 images is noisy, and every ECE difference here falls well inside its bootstrap interval. NLL and Brier are the more reliable measures, so they drove the decision.
+
+**The trade-off: lower sensitivity.** The learned bias (b = −1.49) lowers every malignant probability. A lesion is now called malignant only when the raw model was fairly sure. On the test set this cut false alarms from 8 to 2 but raised missed malignancies from 7 to 9 (recall 75.9% → 69.0%). For a screening tool, a missed cancer usually costs more than a false alarm, so this operating point would need a lower threshold before any clinical use. The calibrated probabilities make that choice explicit. For example, flagging anything above 30% malignant would be a deliberate, interpretable decision rather than an artefact of the training loss.
+
+The fitted parameters are saved under `"calibration"` in `models/checkpoints/resnet18_busi_metrics.json`. Retraining rewrites that file, so re-run `python -m scripts.evaluate_busi` after every training run. `scripts/predict.py` and `src/explainability/gradcam.py` predict with the calibrated probabilities. The web app reads the same parameters through `load_calibration` and `apply_calibration` in `src/evaluate/calibration.py`.
+
+Confusion Matrix (Platt calibrated, threshold 0.5):
 
 ```text
-[[54  8]
- [ 7 22]]
+[[60  2]
+ [ 9 20]]
 ```
 
 Interpretation:
 
 ```text
-54 benign images were correctly classified.
+60 benign images were correctly classified.
 
-22 malignant images were correctly classified.
+20 malignant images were correctly classified.
 
-8 benign images were incorrectly classified as malignant.
+2 benign images were incorrectly classified as malignant.
 
-7 malignant images were incorrectly classified as benign.
+9 malignant images were incorrectly classified as benign.
 ```
 
-Training writes these metrics to `models/checkpoints/resnet18_busi_metrics.json`, which the web app reads for its sidebar.
+Training writes the raw-model test metrics to `models/checkpoints/resnet18_busi_metrics.json`. `scripts/evaluate_busi.py` adds the Platt-calibrated test metrics to the same file under `calibration.test`.
 
 > These results should be interpreted in the context of the relatively small dataset and the specific train-validation-test split used in this experiment.
 
@@ -967,9 +978,9 @@ It writes the following to `results/busi/`:
 * `test_metrics.json`
 * `roc_pr_curves.png`
 * `confusion_matrix.png`
-* `calibration.png` (reliability curves before and after temperature scaling)
+* `calibration.png` (reliability curves: uncalibrated, temperature scaling and Platt scaling)
 
-It also fits the calibration temperature on the validation split and saves it to `models/checkpoints/resnet18_busi_metrics.json`, where the web app reads it. Retraining rewrites that file, so re-run this script after every training run.
+It also fits temperature and Platt scaling on the validation split, compares them, and saves the Platt parameters to `models/checkpoints/resnet18_busi_metrics.json`, where the web app reads it. Retraining rewrites that file, so re-run this script after every training run.
 
 Use `--checkpoint` to evaluate a different model, or `--bootstrap` to change the number of resamples.
 

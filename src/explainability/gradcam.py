@@ -7,10 +7,12 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
+from src.evaluate.calibration import apply_calibration, load_calibration
 from src.explainability.gradcam_utils import generate_gradcam
 
 
 CHECKPOINT = "models/checkpoints/resnet18_busi_final.pth"
+METRICS_FILE = "models/checkpoints/resnet18_busi_metrics.json"
 
 CLASSES = {
     0: "Benign",
@@ -56,9 +58,9 @@ def main():
 
     with torch.no_grad():
 
-        probabilities = torch.softmax(
-            model(input_tensor),
-            dim=1
+        probabilities = apply_calibration(
+            model(input_tensor).cpu(),
+            load_calibration(METRICS_FILE)
         )
 
     prediction = torch.argmax(probabilities, dim=1).item()
@@ -74,7 +76,8 @@ def main():
         model,
         input_tensor,
         image,
-        device
+        device,
+        target_class=prediction
     )
 
 

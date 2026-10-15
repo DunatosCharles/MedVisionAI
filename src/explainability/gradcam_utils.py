@@ -12,7 +12,8 @@ def generate_gradcam(
     model,
     image_tensor,
     original_image,
-    device
+    device,
+    target_class=None
 ):
 
     model.eval()
@@ -23,21 +24,24 @@ def generate_gradcam(
     ]
 
 
-    with torch.no_grad():
+    # Explain the class the caller predicted (which may come from
+    # calibrated probabilities), else the raw argmax
+    if target_class is None:
 
-        output = model(
-            image_tensor
-        )
+        with torch.no_grad():
 
+            output = model(
+                image_tensor
+            )
 
-    prediction = torch.argmax(
-        output
-    ).item()
+        target_class = torch.argmax(
+            output
+        ).item()
 
 
     targets = [
         ClassifierOutputTarget(
-            prediction
+            target_class
         )
     ]
 

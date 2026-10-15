@@ -5,6 +5,10 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
+from src.evaluate.calibration import apply_calibration, load_calibration
+
+
+METRICS_PATH = "models/checkpoints/resnet18_busi_metrics.json"
 
 
 def get_device():
@@ -70,15 +74,16 @@ def predict(image_path):
 
         output = model(image)
 
-        probabilities = torch.softmax(
-            output,
-            dim=1
-        )
+    # Calibrated on the validation set by scripts/evaluate_busi.py
+    probabilities = apply_calibration(
+        output.cpu(),
+        load_calibration(METRICS_PATH)
+    )
 
-        prediction = torch.argmax(
-            output,
-            dim=1
-        ).item()
+    prediction = torch.argmax(
+        probabilities,
+        dim=1
+    ).item()
 
 
     classes = {

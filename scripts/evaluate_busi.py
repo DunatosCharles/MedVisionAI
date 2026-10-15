@@ -24,9 +24,11 @@ from src.evaluate.metrics import (
     classification_metrics,
 )
 from src.evaluate.calibration import (
-    apply_temperature,
+    IDENTITY,
+    apply_calibration,
+    fit_platt,
     fit_temperature,
-    save_temperature,
+    save_calibration,
 )
 from src.train.train_resnet import get_device, FINAL_CHECKPOINT, METRICS_FILE
 
@@ -51,9 +53,19 @@ def collect_logits(model, loader, device):
     return np.array(labels), torch.cat(logits)
 
 
-def malignant_probability(logits, temperature=1.0):
+def malignant_probability(logits, calibration=IDENTITY):
 
-    return apply_temperature(logits, temperature)[:, 1].numpy()
+    return apply_calibration(logits, calibration)[:, 1].numpy()
+
+
+def log_loss(labels, probabilities):
+
+    probabilities = np.clip(probabilities, 1e-7, 1 - 1e-7)
+
+    return float(-np.mean(
+        labels * np.log(probabilities)
+        + (1 - labels) * np.log(1 - probabilities)
+    ))
 
 
 def plot_confusion_matrix(labels, probabilities, path):
@@ -127,7 +139,7 @@ def plot_calibration(labels, curves, path):
 
     curve_ax.set_ylabel("Observed fraction malignant")
     curve_ax.set_title("Reliability Diagram")
-    curve_ax.legend(loc="upper left")
+    curve_ax.legend(loc="upper left", fontsize=8)
 
     hist_ax.set_xlabel("Predicted probability of malignant")
     hist_ax.set_ylabel("Count")
@@ -146,7 +158,7 @@ def main():
     parser.add_argument("--checkpoint", default=FINAL_CHECKPOINT)
     parser.add_argument(
         "--metrics-file", default=METRICS_FILE,
-        help="JSON next to the checkpoint where the fitted temperature is saved"
+        help="JSON next to the checkpoint where the fitted calibration is saved"
     )
     parser.add_argument("--output-dir", default="results/busi")
     parser.add_argument("--bootstrap", type=int, default=2000)
@@ -171,51 +183,79 @@ def main():
         )
     )
 
-    # Fit the temperature on validation only, so the test set stays unseen
+    # Fit both calibrators on validation only, so the test set stays unseen
     val_labels, val_logits = collect_logits(model, val_loader, device)
-    temperature = fit_temperature(val_logits, val_labels)
-
-    val_ece_before = classification_metrics(
-        val_labels, malignant_probability(val_logits))["ece"]
-    val_ece_after = classification_metrics(
-        val_labels, malignant_probability(val_logits, temperature))["ece"]
-
-    print(f"\nTemperature fitted on {len(val_labels)} validation images: "
-          f"T = {temperature:.3f}")
-    print(f"Validation ECE {val_ece_before:.4f} -> {val_ece_after:.4f}")
-
-    save_temperature(
-        args.metrics_file, temperature,
-        {"fitted_on": "validation", "n_val": int(len(val_labels))}
-    )
-
     labels, logits = collect_logits(model, test_loader, device)
 
-    raw_probabilities = malignant_probability(logits)
-    probabilities = malignant_probability(logits, temperature)
+    temperature = fit_temperature(val_logits, val_labels)
+    platt = fit_platt(val_logits, val_labels)
 
-    raw_metrics = classification_metrics(labels, raw_probabilities)
-    raw_intervals = bootstrap_confidence_intervals(
-        labels, raw_probabilities, n_resamples=args.bootstrap
-    )
+    # Platt scaling is the adopted calibrator: on validation it improved
+    # NLL and Brier over temperature scaling (see README, Calibration)
+    calibrators = {
+        "uncalibrated": IDENTITY,
+        "temperature": temperature,
+        "platt": platt,
+    }
 
-    metrics = classification_metrics(labels, probabilities)
-    intervals = bootstrap_confidence_intervals(
-        labels, probabilities, n_resamples=args.bootstrap
-    )
+    print(f"\nFitted on {len(val_labels)} validation images: "
+          f"temperature T = {temperature['temperature']:.3f}, "
+          f"Platt scale = {platt['scale']:.3f}, bias = {platt['bias']:.3f}")
+
+    print("\nValidation (in-sample)")
+
+    for name, calibration in calibrators.items():
+        p = malignant_probability(val_logits, calibration)
+        m = classification_metrics(val_labels, p)
+        print(f"{name:<14} NLL {log_loss(val_labels, p):.4f}  "
+              f"Brier {m['brier']:.4f}  ECE {m['ece']:.4f}")
+
+    test_probabilities = {
+        name: malignant_probability(logits, calibration)
+        for name, calibration in calibrators.items()
+    }
+    test_metrics = {
+        name: classification_metrics(labels, p)
+        for name, p in test_probabilities.items()
+    }
+    test_intervals = {
+        name: bootstrap_confidence_intervals(
+            labels, p, n_resamples=args.bootstrap
+        )
+        for name, p in test_probabilities.items()
+    }
+
+    probabilities = test_probabilities["platt"]
+    metrics = test_metrics["platt"]
 
     print(f"\nResults on {len(labels)} test images (95% bootstrap CI)\n")
-    print(f"{'':<12} {'Uncalibrated':<26} {f'Calibrated (T = {temperature:.2f})'}")
+    print(f"{'':<12} " + "".join(f"{name:<27}" for name in calibrators))
 
-    for name, value in metrics.items():
-        raw_low, raw_high = raw_intervals[name]
-        low, high = intervals[name]
-        print(f"{name:<12} {raw_metrics[name]:.4f} [{raw_low:.4f}, {raw_high:.4f}]"
-              f"  {value:.4f} [{low:.4f}, {high:.4f}]")
+    for metric in metrics:
+        print(f"{metric:<12} " + "".join(
+            f"{test_metrics[name][metric]:.4f} "
+            f"[{test_intervals[name][metric][0]:.4f}, "
+            f"{test_intervals[name][metric][1]:.4f}]  "
+            for name in calibrators
+        ))
 
-    print("\nConfusion Matrix")
+    print(f"{'nll':<12} " + "".join(
+        f"{log_loss(labels, p):<27.4f}" for p in test_probabilities.values()
+    ))
+
+    print("\nConfusion Matrix (Platt calibrated, threshold 0.5)")
 
     print(confusion_matrix(labels, (probabilities >= 0.5).astype(int)))
+
+    # The app reports these test metrics, since it predicts with Platt scaling
+    save_calibration(
+        args.metrics_file, platt,
+        {
+            "fitted_on": "validation",
+            "n_val": int(len(val_labels)),
+            "test": {k: float(v) for k, v in metrics.items()},
+        }
+    )
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -230,8 +270,11 @@ def main():
     plot_calibration(
         labels,
         [
-            ("Uncalibrated", raw_probabilities, raw_metrics),
-            (f"Temperature scaled (T = {temperature:.2f})", probabilities, metrics),
+            ("Uncalibrated", test_probabilities["uncalibrated"],
+             test_metrics["uncalibrated"]),
+            (f"Temperature (T = {temperature['temperature']:.2f})",
+             test_probabilities["temperature"], test_metrics["temperature"]),
+            ("Platt", probabilities, metrics),
         ],
         os.path.join(args.output_dir, "calibration.png")
     )
@@ -241,13 +284,20 @@ def main():
             {
                 "checkpoint": args.checkpoint,
                 "n_test": int(len(labels)),
-                "temperature": temperature,
+                "calibration": platt,
                 "metrics": {k: float(v) for k, v in metrics.items()},
-                "ci_95": intervals,
-                "metrics_uncalibrated": {
-                    k: float(v) for k, v in raw_metrics.items()
+                "ci_95": test_intervals["platt"],
+                "comparison": {
+                    name: {
+                        "calibration": calibrators[name],
+                        "metrics": {
+                            k: float(v) for k, v in test_metrics[name].items()
+                        },
+                        "nll": log_loss(labels, test_probabilities[name]),
+                        "ci_95": test_intervals[name],
+                    }
+                    for name in calibrators
                 },
-                "ci_95_uncalibrated": raw_intervals,
             },
             f,
             indent=4
