@@ -76,6 +76,18 @@ def apply_calibration(logits, calibration=IDENTITY):
     return torch.stack([1 - malignant, malignant], dim=-1)
 
 
+def flag_threshold(calibration=IDENTITY):
+
+    # Probability at which a lesion is flagged malignant. Platt's bias
+    # lowers every malignant probability, so a 0.5 cut-off would miss more
+    # cancers than the uncalibrated model. Flagging at the probability of
+    # the uncalibrated decision boundary (logit margin 0) keeps its more
+    # cautious decisions while showing calibrated probabilities:
+    # sigmoid(scale * 0 + bias) = sigmoid(bias), which is 0.5 for
+    # temperature scaling or no calibration
+    return float(torch.sigmoid(torch.tensor(calibration["bias"])))
+
+
 def load_calibration(metrics_path):
 
     # Fall back to the identity (uncalibrated) if the model was never calibrated

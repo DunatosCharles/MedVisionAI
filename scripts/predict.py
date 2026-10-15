@@ -5,7 +5,11 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
-from src.evaluate.calibration import apply_calibration, load_calibration
+from src.evaluate.calibration import (
+    apply_calibration,
+    flag_threshold,
+    load_calibration,
+)
 
 
 METRICS_PATH = "models/checkpoints/resnet18_busi_metrics.json"
@@ -75,15 +79,17 @@ def predict(image_path):
         output = model(image)
 
     # Calibrated on the validation set by scripts/evaluate_busi.py
+    calibration = load_calibration(METRICS_PATH)
+
     probabilities = apply_calibration(
         output.cpu(),
-        load_calibration(METRICS_PATH)
+        calibration
     )
 
-    prediction = torch.argmax(
-        probabilities,
-        dim=1
-    ).item()
+    # Same cautious decision rule as the web app
+    prediction = int(
+        probabilities[0][1].item() >= flag_threshold(calibration)
+    )
 
 
     classes = {
@@ -98,9 +104,9 @@ def predict(image_path):
     )
 
     print(
-        "Confidence:",
+        "Probability of malignancy:",
         round(
-            probabilities[0][prediction].item()*100,
+            probabilities[0][1].item()*100,
             2
         ),
         "%"

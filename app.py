@@ -12,7 +12,11 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
-from src.evaluate.calibration import apply_calibration, load_calibration
+from src.evaluate.calibration import (
+    apply_calibration,
+    flag_threshold,
+    load_calibration,
+)
 
 
 MODEL_PATH = "models/checkpoints/resnet18_busi_final.pth"
@@ -25,7 +29,7 @@ SAMPLE_DIR = "datasets/busi/Dataset_BUSI_with_GT"
 SAMPLES = {
     "Benign": "benign/benign (19).png",
     "Malignant": "malignant/malignant (153).png",
-    "Borderline": "malignant/malignant (159).png",
+    "Borderline": "malignant/malignant (108).png",
 }
 
 
@@ -106,12 +110,44 @@ st.markdown(
     .mv-benign { color: var(--mv-benign); }
     .mv-malignant { color: var(--mv-malignant); }
 
-    .mv-scale {
+    .mv-bar {
+        position: relative;
+        height: 0.6rem;
+        border-radius: 999px;
+        background: rgba(127, 127, 127, 0.18);
+        margin-top: 0.25rem;
+    }
+
+    .mv-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: var(--mv-accent);
+    }
+
+    .mv-bar-mark {
+        position: absolute;
+        top: -0.3rem;
+        bottom: -0.3rem;
+        width: 2px;
+        margin-left: -1px;
+        background: currentColor;
+        opacity: 0.7;
+    }
+
+    .mv-bar-labels {
+        position: relative;
         display: flex;
         justify-content: space-between;
         font-size: 0.78rem;
-        opacity: 0.6;
-        margin-top: -0.5rem;
+        opacity: 0.65;
+        margin: 0.4rem 0 0.75rem 0;
+        height: 1.1rem;
+    }
+
+    .mv-bar-mark-label {
+        position: absolute;
+        transform: translateX(-50%);
+        white-space: nowrap;
     }
 
     .mv-empty {
@@ -180,6 +216,18 @@ def get_calibration():
 calibration = get_calibration()
 
 
+# Calibrated probabilities, but flagged at the uncalibrated model's more
+# cautious decision boundary (see flag_threshold)
+threshold = flag_threshold(calibration)
+
+
+def logit(p):
+
+    p = min(max(p, 1e-6), 1 - 1e-6)
+
+    return float(torch.log(torch.tensor(p / (1 - p))))
+
+
 # -----------------------
 # Image Transform
 # -----------------------
@@ -205,11 +253,17 @@ def load_metrics():
     if not data:
         return None
 
-    # Calibration can move the decision boundary, so prefer the test
-    # metrics at the calibrated operating point the app actually uses
-    calibrated = data.get("calibration", {}).get("test")
+    # The app keeps the uncalibrated model's decisions (see
+    # flag_threshold), so its raw test metrics describe what it flags
+    metrics = data.get("test")
 
-    return calibrated or data.get("test")
+    if metrics and "specificity" not in metrics and "confusion_matrix" in metrics:
+
+        (tn, fp), _ = metrics["confusion_matrix"]
+
+        metrics = {**metrics, "specificity": tn / (tn + fp)}
+
+    return metrics
 
 
 def load_cv_summary():
@@ -412,19 +466,17 @@ with result_col:
 
             malignant_probability = probabilities[0, 1].item()
 
-            prediction = int(malignant_probability >= 0.5)
+            prediction = int(malignant_probability >= threshold)
 
             result = ["Benign", "Malignant"][prediction]
 
-            confidence = max(
-                malignant_probability,
-                1 - malignant_probability
-            )
+            # Distance from the decision boundary in logit space; 2.2 and
+            # 0.85 correspond to 90% and 70% around a 50% boundary
+            distance = abs(logit(malignant_probability) - logit(threshold))
 
-            # How far the probability sits from the 0.5 decision boundary
-            if confidence >= 0.9:
+            if distance >= 2.2:
                 certainty = "High confidence"
-            elif confidence >= 0.7:
+            elif distance >= 0.85:
                 certainty = "Moderate confidence"
             else:
                 certainty = "Low confidence: close to the decision boundary"
@@ -445,13 +497,33 @@ with result_col:
                 f"{malignant_probability * 100:.1f}%"
             )
 
-            st.progress(malignant_probability)
+            fill = malignant_probability * 100
+            mark = threshold * 100
 
             st.markdown(
-                '<div class="mv-scale"><span>Benign</span>'
-                "<span>50%</span><span>Malignant</span></div>",
+                f"""
+                <div class="mv-bar">
+                    <div class="mv-bar-fill" style="width:{fill:.1f}%"></div>
+                    <div class="mv-bar-mark" style="left:{mark:.1f}%"></div>
+                </div>
+                <div class="mv-bar-labels">
+                    <span>0%</span>
+                    <span class="mv-bar-mark-label" style="left:{mark:.1f}%">
+                        flag ≥ {mark:.0f}%
+                    </span>
+                    <span>100%</span>
+                </div>
+                """,
                 unsafe_allow_html=True
             )
+
+            if threshold < 0.5:
+
+                st.caption(
+                    f"Lesions are flagged as malignant from {mark:.0f}% "
+                    "calibrated probability, so that fewer cancers are "
+                    "missed."
+                )
 
 
 # -----------------------

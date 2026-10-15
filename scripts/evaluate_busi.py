@@ -26,6 +26,7 @@ from src.evaluate.metrics import (
 from src.evaluate.calibration import (
     IDENTITY,
     apply_calibration,
+    flag_threshold,
     fit_platt,
     fit_temperature,
     save_calibration,
@@ -68,9 +69,9 @@ def log_loss(labels, probabilities):
     ))
 
 
-def plot_confusion_matrix(labels, probabilities, path):
+def plot_confusion_matrix(labels, probabilities, path, threshold=0.5):
 
-    predictions = (probabilities >= 0.5).astype(int)
+    predictions = (probabilities >= threshold).astype(int)
 
     fig, ax = plt.subplots(figsize=(4.5, 4))
 
@@ -79,7 +80,7 @@ def plot_confusion_matrix(labels, probabilities, path):
         display_labels=CLASS_NAMES
     ).plot(ax=ax, cmap="Blues", colorbar=False)
 
-    ax.set_title("Test Set Confusion Matrix")
+    ax.set_title(f"Test Set Confusion Matrix (flag ≥ {threshold:.0%})")
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -247,7 +248,18 @@ def main():
 
     print(confusion_matrix(labels, (probabilities >= 0.5).astype(int)))
 
-    # The app reports these test metrics, since it predicts with Platt scaling
+    # The app shows Platt probabilities but flags at flag_threshold, which
+    # reproduces the raw model's decisions
+    threshold = flag_threshold(platt)
+
+    print(
+        f"\nConfusion Matrix (deployed: Platt >= {threshold:.3f}, "
+        "same decisions as the raw model)"
+    )
+
+    print(confusion_matrix(labels, (probabilities >= threshold).astype(int)))
+
+    # Platt metrics at 0.5, kept for comparison with the deployed rule
     save_calibration(
         args.metrics_file, platt,
         {
@@ -261,7 +273,8 @@ def main():
 
     plot_confusion_matrix(
         labels, probabilities,
-        os.path.join(args.output_dir, "confusion_matrix.png")
+        os.path.join(args.output_dir, "confusion_matrix.png"),
+        threshold=threshold
     )
     plot_roc_pr(
         labels, probabilities, metrics,

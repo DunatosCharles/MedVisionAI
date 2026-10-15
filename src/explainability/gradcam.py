@@ -7,7 +7,11 @@ from PIL import Image
 
 from src.models.resnet import BreastCancerResNet
 from src.data.transforms import get_eval_transform
-from src.evaluate.calibration import apply_calibration, load_calibration
+from src.evaluate.calibration import (
+    apply_calibration,
+    flag_threshold,
+    load_calibration,
+)
 from src.explainability.gradcam_utils import generate_gradcam
 
 
@@ -56,20 +60,25 @@ def main():
     input_tensor = get_eval_transform()(image).unsqueeze(0).to(device)
 
 
+    calibration = load_calibration(METRICS_FILE)
+
     with torch.no_grad():
 
         probabilities = apply_calibration(
             model(input_tensor).cpu(),
-            load_calibration(METRICS_FILE)
+            calibration
         )
 
-    prediction = torch.argmax(probabilities, dim=1).item()
+    # Same cautious decision rule as the web app
+    prediction = int(
+        probabilities[0][1].item() >= flag_threshold(calibration)
+    )
 
-    confidence = probabilities[0][prediction].item() * 100
+    malignancy = probabilities[0][1].item() * 100
 
 
     print(f"Prediction: {CLASSES[prediction]}")
-    print(f"Confidence: {confidence:.2f}%")
+    print(f"Probability of malignancy: {malignancy:.2f}%")
 
 
     visualization = generate_gradcam(
@@ -89,7 +98,7 @@ def main():
 
     plt.title(
         f"Prediction: {CLASSES[prediction]}\n"
-        f"Confidence: {confidence:.2f}%"
+        f"Probability of malignancy: {malignancy:.2f}%"
     )
 
     plt.savefig(

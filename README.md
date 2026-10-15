@@ -555,9 +555,11 @@ The F1 score is particularly important because the dataset contains class imbala
 
 The final reported BUSI results should be kept as a separate experimental result from the BreastMNIST results.
 
-The current BUSI model (retrained October 2026 on a lesion-grouped 70 / 15 / 15 split, seed 42; see Dataset Splitting) achieved the following on the held-out test set of 91 images (62 benign, 29 malignant). The model is evaluated at a 0.5 threshold, both on its raw outputs and after **Platt scaling**, which the web app uses (see Calibration below):
+The current BUSI model (retrained October 2026 on a lesion-grouped 70 / 15 / 15 split, seed 42; see Dataset Splitting) achieved the following on the held-out test set of 91 images (62 benign, 29 malignant). The table compares the raw model at a 0.5 threshold with **Platt scaling** at a 0.5 threshold.
 
-| Metric                       | Raw model | 95% CI (bootstrap) | Platt calibrated (deployed) | 95% CI (bootstrap) |
+The web app combines the two: it **shows Platt-calibrated probabilities** (left-hand Brier score 0.103 applies) but **flags lesions with the raw model's decisions** (left-hand accuracy, recall and specificity apply). See "Deployed decision threshold" below.
+
+| Metric                       | Raw model (= app decisions) | 95% CI (bootstrap) | Platt at 0.5 (not used for decisions) | 95% CI (bootstrap) |
 | ---------------------------- | --------: | :----------------: | --------------------------: | :----------------: |
 | Accuracy                     |    83.52% |   75.8% – 90.1%    |                      87.91% |   80.2% – 93.4%    |
 | Precision (PPV)              |    73.33% |   56.5% – 88.0%    |                      90.91% |   76.5% – 100%     |
@@ -603,28 +605,49 @@ The previous model was trained on a plain stratified split. It scored 86.7% accu
 
 **Platt scaling was adopted** because it improved the proper scoring rules on validation. Each method was refitted on 4/5 of the validation set and scored on the remaining 1/5, repeated 20 times. Out-of-fold, NLL fell from 0.30 to 0.24 and Brier from 0.092 to 0.080. Temperature scaling gave no improvement. On the untouched test set, Platt scaling lowered Brier from 0.124 to 0.103. **It did not lower ECE**: 0.095 on test, and on validation out-of-fold 0.076 versus 0.070 uncalibrated. ECE with 10 bins on ~90 images is noisy, and every ECE difference here falls well inside its bootstrap interval. NLL and Brier are the more reliable measures, so they drove the decision.
 
-**The trade-off: lower sensitivity.** The learned bias (b = −1.49) lowers every malignant probability. A lesion is now called malignant only when the raw model was fairly sure. On the test set this cut false alarms from 8 to 2 but raised missed malignancies from 7 to 9 (recall 75.9% → 69.0%). For a screening tool, a missed cancer usually costs more than a false alarm, so this operating point would need a lower threshold before any clinical use. The calibrated probabilities make that choice explicit. For example, flagging anything above 30% malignant would be a deliberate, interpretable decision rather than an artefact of the training loss.
+**The trade-off at a 0.5 threshold: lower sensitivity.** The learned bias (b = −1.49) lowers every malignant probability. At a 0.5 cut-off, a lesion would be called malignant only when the raw model was fairly sure. On the test set this cut false alarms from 8 to 2 but raised missed malignancies from 7 to 9 (recall 75.9% → 69.0%).
 
-The fitted parameters are saved under `"calibration"` in `models/checkpoints/resnet18_busi_metrics.json`. Retraining rewrites that file, so re-run `python -m scripts.evaluate_busi` after every training run. `scripts/predict.py` and `src/explainability/gradcam.py` predict with the calibrated probabilities. The web app reads the same parameters through `load_calibration` and `apply_calibration` in `src/evaluate/calibration.py`.
+#### Deployed decision threshold
 
-Confusion Matrix (Platt calibrated, threshold 0.5):
+For a screening-style tool, a missed cancer costs more than a false alarm. So the web app does **not** flag at 0.5 on the Platt probability. It flags at the probability that corresponds to the raw model's decision boundary (logit margin *m* = 0):
 
 ```text
-[[60  2]
- [ 9 20]]
+threshold = sigmoid(a · 0 + b) = sigmoid(−1.49) ≈ 18.4%
+```
+
+A lesion is flagged malignant when its calibrated probability is at least 18.4%. This gives exactly the raw model's decisions on every image (checked on all 91 test images: 7 missed malignancies, 8 false alarms), while the displayed probability stays calibrated. For example, a lesion shown as "21% probability of malignancy" is still flagged, and the result card says why.
+
+| Test set (91 images) | Raw model at 0.5 = **deployed** (Platt ≥ 18.4%) | Platt at 0.5 |
+| -------------------- | :---------------------------------------------: | :----------: |
+| Missed malignancies  |                   **7** of 29                   |   9 of 29    |
+| False alarms         |                      8 of 62                    |   2 of 62    |
+| Recall               |                    **75.9%**                    |    69.0%     |
+| Specificity          |                      87.1%                      |  **96.8%**   |
+
+The threshold is computed by `flag_threshold` in `src/evaluate/calibration.py`. It is 0.5 for temperature scaling or no calibration, and follows automatically if Platt scaling is refitted.
+
+The fitted parameters are saved under `"calibration"` in `models/checkpoints/resnet18_busi_metrics.json`. Retraining rewrites that file, so re-run `python -m scripts.evaluate_busi` after every training run. The web app, `scripts/predict.py` and `src/explainability/gradcam.py` all read the same parameters through `load_calibration`, `apply_calibration` and `flag_threshold` in `src/evaluate/calibration.py`, so they report the same probability and decision.
+
+Confusion Matrix (deployed decisions):
+
+```text
+[[54  8]
+ [ 7 22]]
 ```
 
 Interpretation:
 
 ```text
-60 benign images were correctly classified.
+54 benign images were correctly classified.
 
-20 malignant images were correctly classified.
+22 malignant images were correctly classified.
 
-2 benign images were incorrectly classified as malignant.
+8 benign images were incorrectly classified as malignant.
 
-9 malignant images were incorrectly classified as benign.
+7 malignant images were incorrectly classified as benign.
 ```
+
+With Platt scaling at a 0.5 threshold, the matrix would be `[[60, 2], [9, 20]]`.
 
 Training writes the raw-model test metrics to `models/checkpoints/resnet18_busi_metrics.json`. `scripts/evaluate_busi.py` adds the Platt-calibrated test metrics to the same file under `calibration.test`.
 
@@ -1188,7 +1211,7 @@ This would provide a better estimate of generalization to unseen data distributi
 
 ## 8. Model Calibration
 
-Calibration is now measured, and temperature scaling is fitted and applied (see the Calibration section above). For the current model, temperature scaling has almost no effect (T = 1.04). The remaining error is the over-prediction of malignant for mid-range scores. Methods that can bend the calibration curve, such as Platt scaling, isotonic regression or recalibration with class-prior correction, may help, but need more held-out data than a single split provides.
+Calibration is now measured, and Platt scaling is fitted on the validation set. The web app shows its probabilities, but flags at the raw model's more cautious boundary (see "Deployed decision threshold"). It improves Brier score and NLL but not ECE. Next steps are to fit the calibrator on pooled cross-validation predictions instead of a single ~90-image validation set, and to compare it with isotonic regression once more held-out data is available.
 
 A model predicting:
 
