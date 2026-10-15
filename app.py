@@ -379,22 +379,15 @@ with input_col:
             label_visibility="collapsed"
         )
 
-        samples_available = os.path.isdir(SAMPLE_DIR)
+        sample = None
 
-        if samples_available:
+        if os.path.isdir(SAMPLE_DIR):
 
-            st.caption("No image at hand? Try a sample from the test set:")
-
-            sample_cols = st.columns(len(SAMPLES))
-
-            for col, name in zip(sample_cols, SAMPLES):
-
-                if col.button(name, width="stretch"):
-                    st.session_state["sample"] = name
-
-        # A new upload replaces any sample that was selected
-        if uploaded_file is not None:
-            st.session_state.pop("sample", None)
+            # Pills wrap as whole chips in narrow columns, unlike buttons
+            sample = st.pills(
+                "No image at hand? Try a sample from the test set:",
+                list(SAMPLES)
+            )
 
         with st.expander("Image guidelines"):
 
@@ -419,15 +412,13 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("L")
     image_name = uploaded_file.name
 
-elif st.session_state.get("sample"):
-
-    name = st.session_state["sample"]
+elif sample:
 
     image = Image.open(
-        os.path.join(SAMPLE_DIR, SAMPLES[name])
+        os.path.join(SAMPLE_DIR, SAMPLES[sample])
     ).convert("L")
 
-    image_name = f"Sample: {name}"
+    image_name = f"Sample: {sample}"
 
 
 with result_col:
@@ -507,11 +498,9 @@ with result_col:
                     <div class="mv-bar-mark" style="left:{mark:.1f}%"></div>
                 </div>
                 <div class="mv-bar-labels">
-                    <span>0%</span>
                     <span class="mv-bar-mark-label" style="left:{mark:.1f}%">
                         flag ≥ {mark:.0f}%
                     </span>
-                    <span>100%</span>
                 </div>
                 """,
                 unsafe_allow_html=True
